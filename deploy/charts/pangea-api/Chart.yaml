@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pangea-api
+description: Backend API for Pangea Energy and Power (FastAPI over PostgreSQL + pgvector)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

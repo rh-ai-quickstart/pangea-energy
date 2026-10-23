@@ -1,0 +1,6 @@
+
+# Nightly-ish re-scoring of turbine health against the normal-behaviour models.
+# Writes ml_predictions and keeps the /api/turbines/health cache warm.
+healthScoring:
+  enabled: true
+  schedule: "*/30 * * * *"

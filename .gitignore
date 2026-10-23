@@ -1,0 +1,33 @@
+windfarms/
+wavefarms/
+*.csv
+
+*.safetensors
+*.bin
+kokoro_tts/modelcar/kokoro.onnx
+granite-4.0-350m/tokenizer.json
+granite-4.0-350m/vocab.json
+granite-4.0-350m/merges.txt
+
+# Caches / build junk
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Excluded docs / notebooks / images (per request)
+*.ipynb
+DATABASE_SCHEMA.md
+DESIGN_DECISIONS.md
+.env
+.env.*
+*.env
+!*.env.example
+*.pem
+*.key
+kubeconfig
+.kube/
+assistant-architecture.md
+
+database/migrations/
+solarfarms/
+eval/

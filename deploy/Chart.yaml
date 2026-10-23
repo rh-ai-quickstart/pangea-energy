@@ -1,0 +1,17 @@
+apiVersion: v2
+name: pangea
+description: >-
+  Pangea Energy and Power, whole stack: PostgreSQL + pgvector, the FastAPI
+  backend, the dashboard, and the model-serving manifests for the assistant,
+  speech, and the predictive-maintenance models.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: pangea-db
+    version: 0.1.0
+  - name: pangea-api
+    version: 0.1.0
+  - name: pangea-ui
+    version: 0.1.0

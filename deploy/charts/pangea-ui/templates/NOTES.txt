@@ -1,0 +1,12 @@
+pangea-ui deployed.
+
+1. Wait for it to come up:
+
+     oc rollout status deployment/pangea-ui
+
+2. Open the dashboard:
+
+     oc get route pangea-ui -o jsonpath='https://{.spec.host}{"\n"}'
+
+The UI reverse-proxies /api to the pangea-api Service, so the backend does not
+need to be reachable from outside the cluster for the dashboard to work.

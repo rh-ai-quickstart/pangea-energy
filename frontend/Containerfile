@@ -1,0 +1,12 @@
+FROM registry.access.redhat.com/ubi9/nginx-124:latest
+
+COPY dashboard-app.html /opt/app-root/src/index.html
+COPY pange.png /opt/app-root/src/pange.png
+COPY welcome.wav /opt/app-root/src/welcome.wav
+COPY countries-50m.json /opt/app-root/src/countries-50m.json
+
+COPY nginx.default.d/api-proxy.conf /opt/app-root/etc/nginx.default.d/api-proxy.conf
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

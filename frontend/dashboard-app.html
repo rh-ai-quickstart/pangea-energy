@@ -1,0 +1,4583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pangea Energy and Power</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a1929;
+            color: #e3f2fd;
+            overflow-x: hidden;
+            overflow-y: auto;
+            min-height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0a1929;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 99999;
+        }
+
+        .welcome-screen.hidden {
+            display: none;
+        }
+
+        .welcome-logo {
+            text-align: center;
+            animation: fadeIn 1.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .welcome-logo img {
+            max-width: 600px;
+            width: 100%;
+            height: auto;
+            margin-bottom: 3rem;
+            filter: drop-shadow(0 15px 60px rgba(56, 189, 248, 0.5));
+            display: block;
+        }
+
+        .welcome-logo {
+            max-width: 600px;
+        }
+
+        .welcome-title {
+            font-size: 2.8rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05rem;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin-bottom: 4rem;
+            letter-spacing: 0.05rem;
+        }
+
+        .enter-button {
+            position: absolute;
+            bottom: 13%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 25, 41, 0.28);
+            backdrop-filter: blur(14px) saturate(140%);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            border: 1px solid rgba(186, 230, 253, 0.35);
+            padding: 0.95rem 3.4rem;
+            font-size: 0.82rem;
+            font-family: inherit;
+            color: #e8f6ff;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 500;
+            letter-spacing: 0.22rem;
+            text-transform: uppercase;
+            box-shadow: 0 4px 24px rgba(8, 20, 35, 0.35);
+            transition: opacity 0.6s ease, background 0.3s ease,
+                        border-color 0.3s ease, box-shadow 0.3s ease,
+                        transform 0.3s ease;
+        }
+
+        .enter-button:hover {
+            background: rgba(56, 189, 248, 0.16);
+            border-color: rgba(186, 230, 253, 0.75);
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 8px 30px rgba(56, 189, 248, 0.28);
+        }
+
+        .enter-button:active {
+            transform: translateX(-50%) translateY(0);
+            background: rgba(56, 189, 248, 0.24);
+        }
+
+        /* Main Layout */
+        .app-container {
+            display: none;
+            grid-template-columns: 220px minmax(0, 1fr) 400px;
+            grid-template-rows: 60px auto;
+            min-height: 100vh;
+            width: 100vw;
+            max-width: 100vw;
+            position: relative;
+            top: 0;
+            left: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .app-container.active {
+            display: grid;
+            opacity: 1;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeInApp {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            height: 60px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            height: 35px;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 0.05rem;
+        }
+
+        .brand-tagline {
+            font-size: 0.7rem;
+            color: #64748b;
+            letter-spacing: 0.1rem;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        /* Voice capture — centered in the header ("Pangea, ...") */
+        .header-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .voice-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .voice-btn:hover { background: rgba(56, 189, 248, 0.2); }
+
+        .voice-btn .voice-icon {
+            display: block;
+        }
+
+        .voice-btn.recording {
+            border-color: rgba(248, 113, 113, 0.6);
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+        }
+
+        .voice-btn.recording .voice-icon {
+            animation: voicePulse 1s ease-in-out infinite;
+        }
+
+        .voice-btn.busy { opacity: 0.7; cursor: progress; }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.4; }
+        }
+
+        .voice-status {
+            font-size: 0.75rem;
+            color: #64748b;
+            max-width: 320px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .voice-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-input:hover {
+            border-color: #38bdf8;
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .voice-icon {
+            width: 16px;
+            height: 16px;
+            color: #38bdf8;
+        }
+
+        .voice-text {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 0.4rem 1rem 0.4rem 0.6rem;
+            border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .user-status {
+            font-size: 0.7rem;
+            color: #34d399;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34d399;
+        }
+        .status-dot.offline { background: #ef4444; }
+        .status-dot.pending { background: #94a3b8; }
+
+        /* Left Sidebar */
+        .left-sidebar {
+            background: rgba(15, 23, 42, 0.6);
+            border-right: 1px solid rgba(56, 189, 248, 0.1);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            width: 220px;
+            max-width: 220px;
+            box-sizing: border-box;
+            position: sticky;
+            top: 60px;
+            align-self: start;
+            height: calc(100vh - 60px);
+        }
+
+        .fleet-stats {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+        }
+
+        .fleet-header {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .fleet-total {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e3f2fd;
+            margin-bottom: 0.2rem;
+        }
+
+        .fleet-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+
+        .fleet-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.operating {
+            background: #34d399;
+            box-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+        }
+
+        .status-indicator.attention {
+            background: #fbbf24;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        }
+
+        .status-indicator.offline {
+            background: #64748b;
+        }
+
+        .status-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .fleet-availability {
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid rgba(56, 189, 248, 0.1);
+        }
+
+        .availability-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .availability-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #34d399;
+        }
+
+        .availability-change {
+            font-size: 0.75rem;
+            color: #34d399;
+            margin-top: 0.3rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 1rem;
+            background: radial-gradient(ellipse at center top, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .main-content > * {
+            max-width: 100%;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 4px;
+        }
+
+        /* Map Section */
+        .map-section {
+            background:
+                radial-gradient(ellipse at 50% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 55%),
+                linear-gradient(180deg, #0b1f38 0%, #0a1526 100%);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 16px;
+            padding: 0;
+            margin-bottom: 0;
+            position: relative;
+            height: 55vh;
+            min-height: 360px;
+            width: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .world-map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;   /* let the map take drag gestures, not the page */
+        }
+        .world-map:active { cursor: grabbing; }
+
+        .country {
+            fill: rgba(56, 189, 248, 0.09);
+            stroke: rgba(56, 189, 248, 0.45);
+            stroke-width: 0.6px;
+            stroke-linejoin: round;
+        }
+
+        .site-dot { cursor: pointer; }
+        .site-dot .halo { fill: none; opacity: 0.55; }
+        .site-dot .core { stroke: #0a1526; stroke-width: 1.5px; }
+
+        @keyframes sitePulse {
+            0%, 100% { r: var(--r); opacity: 0.55; }
+            50%      { r: calc(var(--r) * 2.1); opacity: 0; }
+        }
+
+        .map-tooltip {
+            position: absolute;
+            z-index: 30;
+            pointer-events: none;
+            background: rgba(10, 25, 41, 0.96);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.72rem;
+            color: #e3f2fd;
+            opacity: 0;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+        .map-tooltip .tt-title { font-weight: 600; margin-bottom: 0.3rem; }
+        .map-tooltip .tt-row { color: #94a3b8; line-height: 1.5; }
+        .map-tooltip .tt-row b { color: #e3f2fd; font-weight: 500; }
+
+        /* Site detail panel (click a map marker) */
+        .site-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 350px;
+            max-width: 84%;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, rgba(11, 31, 56, 0.97) 0%, rgba(10, 21, 38, 0.98) 100%);
+            border-left: 1px solid rgba(56, 189, 248, 0.22);
+            box-shadow: -18px 0 44px rgba(0, 0, 0, 0.45);
+            transform: translateX(101%);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .site-panel.open { transform: translateX(0); }
+
+        .sp-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.9rem 0.9rem 0.7rem 1rem;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+        }
+        .sp-title { font-size: 0.95rem; font-weight: 600; color: #e3f2fd; }
+        .sp-sub {
+            font-size: 0.68rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            margin-top: 0.2rem;
+        }
+        .sp-close {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 1.3rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 0.2rem;
+        }
+        .sp-close:hover { color: #e3f2fd; }
+
+        .sp-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0.85rem 1rem 1.2rem;
+        }
+        .sp-section { margin-bottom: 1.05rem; }
+        .sp-section-title {
+            font-size: 0.64rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12rem;
+            color: #64748b;
+            margin-bottom: 0.45rem;
+        }
+        .sp-empty { font-size: 0.72rem; color: #475569; font-style: italic; }
+
+        .sp-banner {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid rgba(248, 113, 113, 0.4);
+            color: #fca5a5;
+            border-radius: 8px;
+            padding: 0.45rem 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+
+        .sp-output { display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.35rem; }
+        .sp-output b { font-size: 1.35rem; color: #e3f2fd; font-weight: 600; }
+        .sp-output span { font-size: 0.72rem; color: #64748b; }
+        .sp-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(56, 189, 248, 0.12);
+            overflow: hidden;
+        }
+        .sp-bar i {
+            display: block;
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        .sp-counts { display: flex; gap: 0.4rem; margin-top: 0.7rem; }
+        .sp-count {
+            flex: 1;
+            text-align: center;
+            padding: 0.4rem 0.2rem;
+            border-radius: 8px;
+            background: rgba(56, 189, 248, 0.06);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+        }
+        .sp-count b { display: block; font-size: 1rem; color: #e3f2fd; }
+        .sp-count span { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06rem; color: #64748b; }
+        .sp-count.ok b { color: #34d399; }
+        .sp-count.maint b { color: #fbbf24; }
+        .sp-count.off b { color: #f87171; }
+
+        .sp-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .sp-chip {
+            font-family: 'SFMono-Regular', ui-monospace, 'Menlo', monospace;
+            font-size: 0.64rem;
+            padding: 0.22rem 0.4rem;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: rgba(52, 211, 153, 0.14);
+            color: #6ee7b7;
+            transition: transform 0.12s ease, border-color 0.12s ease;
+        }
+        .sp-chip:hover { transform: translateY(-1px); border-color: currentColor; }
+        .sp-chip.maintenance { background: rgba(251, 191, 36, 0.14); color: #fcd34d; }
+        .sp-chip.offline { background: rgba(248, 113, 113, 0.14); color: #fca5a5; }
+        .sp-chip.sel { border-color: #38bdf8; color: #e3f2fd; }
+
+        .sp-chart-wrap { margin-top: 0.6rem; }
+        .sp-chart-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.68rem;
+            color: #94a3b8;
+            margin-bottom: 0.3rem;
+        }
+        .sp-chart-box { height: 110px; }
+
+        .sp-row {
+            padding: 0.45rem 0.55rem;
+            border-radius: 8px;
+            background: rgba(148, 163, 184, 0.06);
+            border-left: 2px solid rgba(148, 163, 184, 0.3);
+            margin-bottom: 0.35rem;
+        }
+        .sp-row.critical { border-left-color: #f87171; background: rgba(248, 113, 113, 0.08); }
+        .sp-row.warning { border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.07); }
+        .sp-row-title { font-size: 0.74rem; color: #e3f2fd; line-height: 1.35; }
+        .sp-row-meta { font-size: 0.65rem; color: #64748b; margin-top: 0.18rem; }
+        .sp-row-action { font-size: 0.66rem; color: #94a3b8; margin-top: 0.25rem; font-style: italic; }
+
+        .sp-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .sp-btn {
+            flex: 1 1 auto;
+            padding: 0.45rem 0.6rem;
+            font-size: 0.7rem;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #bae6fd;
+            transition: background 0.15s ease;
+        }
+        .sp-btn:hover { background: rgba(56, 189, 248, 0.2); }
+
+        .map-overlay {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .map-overlay-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            letter-spacing: 0.03rem;
+        }
+
+        .map-overlay-sub {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            margin-top: 0.2rem;
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 20;
+            display: flex;
+            gap: 1rem;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .map-legend span {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .legend-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-glyph {
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        .map-marker {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #38bdf8;
+            border-radius: 50%;
+            box-shadow:
+                0 0 20px rgba(56, 189, 248, 0.8),
+                0 0 40px rgba(56, 189, 248, 0.4);
+            animation: markerPulse 2s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        @keyframes markerPulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 20px rgba(56, 189, 248, 0.8),
+                    0 0 40px rgba(56, 189, 248, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow:
+                    0 0 30px rgba(56, 189, 248, 1),
+                    0 0 60px rgba(56, 189, 248, 0.6);
+                transform: scale(1.2);
+            }
+        }
+
+        .map-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 50%;
+            animation: ripple 2s ease-out infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 10px;
+                height: 10px;
+                opacity: 1;
+            }
+            100% {
+                width: 60px;
+                height: 60px;
+                opacity: 0;
+            }
+        }
+
+        /* Energy Cards Grid */
+        .energy-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 0;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .energy-card {
+            background: transparent;
+            border: none;
+            border-left: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 0;
+            padding: 0.2rem 0.9rem;
+            transition: all 0.3s ease;
+            min-width: 0;
+            width: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .energy-card:first-child {
+            border-left: none;
+        }
+
+        .energy-card:hover .energy-percentage {
+            color: #38bdf8;
+        }
+
+        .energy-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .energy-icon {
+            font-size: 1.2rem;
+        }
+
+        .energy-name {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .energy-percentage {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #e3f2fd;
+            margin-bottom: 0.2rem;
+        }
+
+        .energy-label {
+            font-size: 0.65rem;
+            color: #64748b;
+            margin-bottom: 0.4rem;
+        }
+
+        .sparkline-container {
+            position: relative;
+            height: 25px;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .sparkline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .chart-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+
+        .section-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .view-all {
+            font-size: 0.8rem;
+            color: #38bdf8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* Predicted Solar Output */
+        .solar-section {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .solar-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .solar-empty {
+            color: #64748b;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+        }
+
+        .solar-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.12);
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+        .solar-card:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+            transform: translateY(-2px);
+        }
+
+        .solar-card.underperforming { border-color: rgba(251, 191, 36, 0.5); }
+        .solar-card.offline { opacity: 0.7; }
+
+        .solar-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.7rem;
+        }
+
+        .solar-site { font-weight: 600; color: #e3f2fd; font-size: 0.9rem; }
+        .solar-city { color: #64748b; font-size: 0.75rem; }
+
+        .solar-badge {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .solar-badge.ok { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .solar-badge.underperforming { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+        .solar-badge.offline { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+        .solar-figures { display: flex; gap: 1.4rem; margin-bottom: 0.7rem; }
+        .solar-figure .lbl { font-size: 0.68rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
+        .solar-figure .val { font-size: 1.15rem; font-weight: 600; color: #e3f2fd; }
+        .solar-figure .val.amber { color: #fbbf24; }
+        .solar-figure .val.cyan { color: #38bdf8; }
+
+        .solar-context { font-size: 0.72rem; color: #64748b; line-height: 1.5; }
+        .solar-context b { color: #94a3b8; font-weight: 500; }
+
+        .solar-spark { height: 34px; margin: 0.4rem 0 0.6rem; }
+
+        /* Solar forecast modal */
+        .solar-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 10, 20, 0.72);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .solar-modal-backdrop.open { display: flex; }
+
+        .solar-modal {
+            background: #0e1c30;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 760px;
+            max-height: 88vh;
+            overflow-y: auto;
+            padding: 1.5rem 1.75rem 1.75rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .solar-modal-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+        .solar-modal-title { font-size: 1.15rem; font-weight: 600; color: #e3f2fd; }
+        .solar-modal-sub { font-size: 0.8rem; color: #64748b; margin-bottom: 1.25rem; }
+        .solar-modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 0.25rem;
+        }
+        .solar-modal-close:hover { color: #e3f2fd; }
+        .solar-modal-chart { height: 240px; margin-bottom: 1.25rem; }
+        .solar-daily {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.6rem;
+        }
+        .solar-day {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 10px;
+            padding: 0.7rem 0.8rem;
+        }
+        .solar-day .d-date { font-size: 0.72rem; color: #64748b; margin-bottom: 0.35rem; }
+        .solar-day .d-energy { font-size: 1.05rem; font-weight: 600; color: #fbbf24; }
+        .solar-day .d-peak { font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
+
+        /* Operator schedule */
+        .schedule-btn {
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .schedule-btn:hover { background: rgba(56, 189, 248, 0.2); }
+
+        .sched-modal { max-width: 1120px; }
+        .sched-form {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .sched-field { display: flex; flex-direction: column; gap: 0.3rem; }
+        .sched-field.wide { grid-column: 1 / -1; }
+        .sched-field label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04rem; }
+        .sched-field input,
+        .sched-field select {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 8px;
+            color: #e3f2fd;
+            padding: 0.5rem 0.6rem;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        .sched-field input:focus,
+        .sched-field select:focus { outline: none; border-color: rgba(56, 189, 248, 0.6); }
+        .sched-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 1rem; }
+        .sched-submit {
+            padding: 0.55rem 1.4rem;
+            border-radius: 8px;
+            border: none;
+            background: #38bdf8;
+            color: #041022;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .sched-submit:disabled { opacity: 0.5; cursor: progress; }
+        .sched-field-wide { grid-column: 1 / -1; }
+        .sched-hint { font-size: 0.78rem; color: #94a3b8; }
+        .sched-hint.ok { color: #7dd3fc; }
+        .sched-hint.warn { color: #fcd34d; }
+        .cal-load { font-size: 0.66rem; color: #64748b; align-self: flex-start; }
+        .cal-shift em {
+            font-style: normal; opacity: 0.75; margin-left: 0.25rem; font-size: 0.9em;
+        }
+        .sched-msg { font-size: 0.8rem; }
+        .sched-msg.ok { color: #4ade80; }
+        .sched-msg.err { color: #f87171; }
+
+        .sched-section-title {
+            font-size: 0.9rem; font-weight: 600; color: #e3f2fd;
+            margin: 0.5rem 0 0.75rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        }
+        .cal-legend { display: flex; gap: 0.6rem; font-weight: 400; }
+        .cal-legend span { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.68rem; color: #94a3b8; }
+        .cal-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+        .cal-wrap { overflow-x: auto; border: 1px solid rgba(56, 189, 248, 0.12); border-radius: 10px; }
+        .cal-grid { display: grid; background: rgba(56, 189, 248, 0.08); gap: 1px; min-width: 900px; }
+        .cal-grid > div { background: #0e1c30; }
+        .cal-corner, .cal-opname {
+            position: sticky; left: 0; z-index: 2;
+            background: #12233b; padding: 0.5rem 0.6rem;
+        }
+        .cal-corner { z-index: 3; top: 0; font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04rem; }
+        .cal-dayhead {
+            position: sticky; top: 0; z-index: 1;
+            background: #12233b; padding: 0.4rem 0.4rem; text-align: center;
+            display: flex; flex-direction: column; gap: 0.05rem;
+        }
+        .cal-dayhead.today { background: rgba(56, 189, 248, 0.18); }
+        .cal-wd { font-size: 0.62rem; color: #64748b; text-transform: uppercase; }
+        .cal-dm { font-size: 0.78rem; color: #e3f2fd; font-weight: 600; }
+        .cal-opname { display: flex; flex-direction: column; gap: 0.1rem; }
+        .cal-opn { font-size: 0.82rem; font-weight: 600; color: #e3f2fd; }
+        .cal-ops { font-size: 0.64rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.03rem; }
+        .cal-cell { padding: 0.35rem 0.35rem; min-height: 52px; display: flex; flex-direction: column; gap: 0.25rem; }
+        .cal-cell.today { background: rgba(56, 189, 248, 0.05); }
+        .cal-shift {
+            font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.03rem;
+            padding: 0.1rem 0.35rem; border-radius: 5px; align-self: flex-start;
+            background: rgba(15, 23, 42, 0.7); color: #64748b;
+        }
+        .cal-shift.day { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; }
+        .cal-shift.night { background: rgba(129, 140, 248, 0.18); color: #a5b4fc; }
+        .cal-shift.on_call { background: rgba(251, 191, 36, 0.18); color: #fcd34d; }
+        .cal-shift.off { opacity: 0.55; }
+        .cal-shift.leave { background: rgba(248, 113, 113, 0.18); color: #fca5a5; }
+        .cal-task {
+            font-size: 0.66rem; line-height: 1.2; color: #e3f2fd;
+            background: rgba(30, 41, 59, 0.9); border-left: 2px solid #38bdf8;
+            border-radius: 4px; padding: 0.18rem 0.3rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .cal-task.drifted { border-left-color: #fcd34d; border-left-style: dashed; }
+        .cal-empty { font-size: 0.8rem; color: #94a3b8; padding: 0.5rem; }
+
+        .view-all:hover {
+            text-decoration: underline;
+        }
+
+        /* Predictive Maintenance */
+        .maintenance-item {
+            display: grid;
+            grid-template-columns: 140px 1fr 200px;
+            gap: 1.2rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(56, 189, 248, 0.1);
+        }
+
+        .turbine-image {
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            overflow: hidden;
+        }
+
+        .turbine-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .maintenance-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            width: fit-content;
+            margin-bottom: 0.8rem;
+        }
+
+        .priority-badge.high {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .turbine-id {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            margin-bottom: 0.4rem;
+        }
+
+        .turbine-location {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+
+        .maintenance-description {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .maintenance-chart {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .mini-chart {
+            height: 100px;
+            width: 100%;
+        }
+
+        .detail-button {
+            margin-top: auto;
+            background: transparent;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .detail-button:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: #38bdf8;
+        }
+
+        /* Upcoming Maintenance */
+        .maintenance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .maintenance-list-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.7rem 0;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+        }
+
+        .maintenance-list-item + .maintenance-list-item {
+            border-top: 1px solid rgba(56, 189, 248, 0.06);
+        }
+
+        .maintenance-icon {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .maintenance-details {
+            flex: 1;
+        }
+
+        .maintenance-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            margin-bottom: 0.2rem;
+        }
+
+        .maintenance-subtitle {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .maintenance-date {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        /* Right Sidebar */
+        .right-sidebar {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 1px solid rgba(56, 189, 248, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            width: 400px;
+            max-width: 400px;
+            box-sizing: border-box;
+            position: sticky;
+            top: 60px;
+            align-self: start;
+            height: calc(100vh - 60px);
+        }
+
+        .alerts-section {
+            padding: 1rem;
+        }
+
+        .alerts-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+        }
+
+        .alerts-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .alert-item {
+            background: transparent;
+            border-left: 2px solid;
+            border-radius: 0;
+            padding: 0.7rem 0 0.7rem 0.9rem;
+            margin-bottom: 0;
+            transition: all 0.3s ease;
+        }
+
+        .alert-item + .alert-item {
+            border-top: 1px solid rgba(56, 189, 248, 0.06);
+        }
+
+        .alert-item:hover {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        .alert-item.critical {
+            border-left-color: #f87171;
+        }
+
+        .alert-item.warning {
+            border-left-color: #fbbf24;
+        }
+
+        .alert-header-row {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .alert-dot.critical {
+            background: #f87171;
+        }
+
+        .alert-dot.warning {
+            background: #fbbf24;
+        }
+
+        .alert-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .alert-message {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+
+        .alert-time {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        /* AI Chat Section */
+        .ai-chat-section {
+            flex: none;
+            min-height: 340px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .ai-body {
+            flex: 1;
+            min-height: 0;
+            max-height: 42vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .chat-msg { margin-bottom: 0.75rem; }
+        .chat-msg .chat-role {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            color: #64748b;
+            margin-bottom: 0.2rem;
+        }
+        .chat-bubble {
+            display: inline-block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.6rem;
+            font-size: 0.85rem;
+            line-height: 1.45;
+            max-width: 100%;
+            white-space: pre-wrap;
+        }
+        .confirm-card {
+            margin-top: 0.6rem; padding: 0.6rem 0.7rem;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 0.5rem; background: rgba(15, 23, 42, 0.6);
+            white-space: normal;
+        }
+        .confirm-head {
+            font-size: 0.82rem; color: #e3f2fd; margin-bottom: 0.45rem;
+        }
+        .confirm-row {
+            display: flex; gap: 0.5rem; font-size: 0.76rem; line-height: 1.5;
+        }
+        .confirm-k { color: #64748b; min-width: 5.5rem; flex-shrink: 0; }
+        .confirm-v { color: #cbd5e1; }
+        .confirm-warn {
+            font-size: 0.74rem; color: #fcd34d; margin-top: 0.4rem;
+        }
+        .confirm-actions {
+            display: flex; align-items: center; gap: 0.45rem; margin-top: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .confirm-yes, .confirm-no {
+            font: inherit; font-size: 0.76rem; padding: 0.28rem 0.7rem;
+            border-radius: 0.35rem; cursor: pointer; border: 1px solid transparent;
+        }
+        .confirm-yes { background: #0ea5e9; color: #04202e; font-weight: 600; }
+        .confirm-no {
+            background: transparent; color: #94a3b8;
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+        .confirm-yes:disabled, .confirm-no:disabled { opacity: 0.5; cursor: progress; }
+        .confirm-status { font-size: 0.74rem; color: #94a3b8; }
+        .confirm-status.ok { color: #4ade80; }
+        .confirm-status.err { color: #f87171; }
+        .confirm-status.muted { color: #64748b; }
+
+
+        /* Operator's phone — visual feedback when a dispatch actually lands. */
+        .phone-sim {
+            position: fixed; right: 2rem; bottom: 2rem; width: 236px; z-index: 4000;
+            opacity: 0; transform: translateY(28px) scale(0.96);
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.2,.9,.3,1.3);
+            pointer-events: none;
+        }
+        .phone-sim.in { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        .phone-body {
+            border-radius: 30px; padding: 9px;
+            background: linear-gradient(160deg, #2b3647, #121a28);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(148,163,184,0.25);
+        }
+        .phone-screen {
+            position: relative; border-radius: 23px; overflow: hidden;
+            background: linear-gradient(170deg, #0b2235 0%, #0a1929 55%, #101d2e 100%);
+            padding: 1.5rem 0.6rem 1.1rem; min-height: 310px;
+        }
+        .phone-notch {
+            position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
+            width: 66px; height: 15px; border-radius: 9px; background: #121a28;
+        }
+        .phone-clock {
+            text-align: center; color: #e3f2fd; margin: 1.4rem 0 0.1rem;
+            font-size: 2.6rem; font-weight: 300; letter-spacing: -0.02em;
+        }
+        .phone-date {
+            text-align: center; color: #94a3b8; font-size: 0.68rem;
+            margin-bottom: 1.2rem;
+        }
+        .phone-note {
+            background: rgba(226, 240, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 15px; padding: 0.5rem 0.6rem;
+            opacity: 0; transform: translateY(-12px);
+            animation: phoneNoteIn 0.45s cubic-bezier(.2,.9,.3,1.3) 0.3s forwards;
+        }
+        @keyframes phoneNoteIn { to { opacity: 1; transform: translateY(0); } }
+        .phone-note-head {
+            display: flex; align-items: center; gap: 0.35rem;
+            font-size: 0.6rem; color: #94a3b8; margin-bottom: 0.3rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .phone-note-icon {
+            width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.5rem; color: #04202e; font-weight: 700;
+            text-transform: none; letter-spacing: 0;
+        }
+        .phone-note-ago { margin-left: auto; text-transform: none; }
+        .phone-note-title {
+            font-size: 0.74rem; color: #e3f2fd; font-weight: 600;
+            margin-bottom: 0.12rem;
+        }
+        .phone-note-body { font-size: 0.68rem; color: #cbd5e1; line-height: 1.35; }
+        .phone-note.removed .phone-note-icon {
+            background: linear-gradient(135deg, #fca5a5, #f87171);
+        }
+        .phone-to {
+            text-align: center; font-size: 0.62rem; color: #64748b;
+            margin-top: 0.55rem;
+        }
+        @media (max-width: 720px) { .phone-sim { display: none; } }
+
+        .chat-msg.user .chat-bubble { background: rgba(56, 189, 248, 0.12); color: #e3f2fd; }
+        .chat-msg.assistant .chat-bubble { background: rgba(148, 163, 184, 0.1); color: #cbd5e1; }
+
+        .thinking-binary {
+            font-family: 'SFMono-Regular', ui-monospace, 'Menlo', monospace;
+            letter-spacing: 0.18em;
+            color: #38bdf8;
+            animation: binaryPulse 1.2s ease-in-out infinite;
+        }
+        .thinking-binary span { display: inline-block; transition: opacity 0.15s ease; }
+        @keyframes binaryPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .ai-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .ai-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .ai-status {
+            font-size: 0.7rem;
+            color: #34d399;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .ai-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message-bubble {
+            background: rgba(30, 41, 59, 0.6);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 0.85rem;
+            color: #e3f2fd;
+            line-height: 1.5;
+        }
+
+        .message.user .message-bubble {
+            background: rgba(56, 189, 248, 0.2);
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: #64748b;
+            padding: 0 0.5rem;
+        }
+
+        .ai-suggestion-card {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .suggestion-icon {
+            font-size: 1.2rem;
+        }
+
+        .suggestion-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e3f2fd;
+        }
+
+        .suggestion-badge {
+            margin-left: auto;
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .suggestion-content {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .suggestion-action {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            padding: 0.4rem 0;
+        }
+
+        .suggestion-action::before {
+            content: '✓';
+            width: 16px;
+            height: 16px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #38bdf8;
+        }
+
+        .ai-buttons {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .ai-button {
+            flex: 1;
+            padding: 0.7rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ai-button.primary {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            border: none;
+            color: white;
+        }
+
+        .ai-button.secondary {
+            background: transparent;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+        }
+
+        .ai-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .ai-input {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            flex-shrink: 0;
+        }
+
+        .ai-input input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e3f2fd;
+            font-size: 0.85rem;
+        }
+
+        .ai-input input::placeholder {
+            color: #64748b;
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .app-container {
+                grid-template-columns: 200px minmax(0, 1fr) 350px;
+            }
+            .left-sidebar {
+                width: 200px;
+                max-width: 200px;
+            }
+            .right-sidebar {
+                width: 350px;
+                max-width: 350px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 180px minmax(0, 1fr) 320px;
+            }
+            .left-sidebar {
+                width: 180px;
+                max-width: 180px;
+                padding: 1.5rem 0.8rem;
+            }
+            .right-sidebar {
+                width: 320px;
+                max-width: 320px;
+            }
+            .energy-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 60px 1fr;
+            }
+            .left-sidebar,
+            .right-sidebar {
+                display: none;
+            }
+            .energy-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        /* Shift-handover tour */
+        .tour-offer {
+            position: fixed;
+            right: 1.5rem;
+            bottom: 1.5rem;
+            width: 310px;
+            z-index: 9000;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 14px;
+            padding: 1.15rem 1.25rem;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transform: translateY(150%);
+            transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.45s ease;
+        }
+
+        .tour-offer.show { opacity: 1; transform: translateY(0); }
+
+        .tour-eyebrow {
+            font-size: 0.6rem;
+            letter-spacing: 0.14rem;
+            text-transform: uppercase;
+            color: #38bdf8;
+            margin-bottom: 0.45rem;
+        }
+
+        .tour-heading {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #e3f2fd;
+            margin-bottom: 0.4rem;
+        }
+
+        .tour-text {
+            font-size: 0.78rem;
+            line-height: 1.55;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .tour-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .tour-actions .tour-spacer { flex: 1; }
+
+        .tour-btn {
+            font-family: inherit;
+            font-size: 0.72rem;
+            letter-spacing: 0.04rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .tour-btn.primary {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: rgba(56, 189, 248, 0.5);
+            color: #e8f6ff;
+            font-weight: 600;
+        }
+        .tour-btn.primary:hover { background: rgba(56, 189, 248, 0.3); }
+
+        .tour-btn.ghost { background: transparent; color: #64748b; }
+        .tour-btn.ghost:hover { color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+
+        /* The 9999px ring is what dims everything except the cut-out. */
+        .tour-spot {
+            position: fixed;
+            z-index: 9500;
+            border-radius: 14px;
+            border: 1px solid rgba(56, 189, 248, 0.65);
+            box-shadow: 0 0 0 9999px rgba(5, 12, 22, 0.8);
+            pointer-events: none;
+            transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .tour-card {
+            position: fixed;
+            z-index: 9600;
+            width: 330px;
+            background: rgba(15, 23, 42, 0.97);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 14px;
+            padding: 1.15rem 1.25rem;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+            transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .tour-count { font-size: 0.68rem; color: #64748b; }
+        .tour-hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0a1929 url('pange.png') no-repeat center center; background-size: cover; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 99999; opacity: 0;" id="welcomeScreen">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(10, 25, 41, 0.10) 0%, rgba(10, 25, 41, 0.14) 45%, rgba(10, 25, 41, 0.62) 100%); z-index: 1;"></div>
+        <button class="enter-button" id="enterButton" style="z-index: 2; opacity: 0;" onclick="enterDashboard()">Enter</button>
+    </div>
+    <script>
+        // Own block, on purpose: the main script is one long unit, so an error
+        // anywhere in it would stop a listener registered at the bottom from
+        // ever running. This one cannot be starved by that.
+        var greetingAudio = new Audio('welcome.wav');
+        var greetingStarted = false;
+
+        function playGreeting() {
+            if (greetingStarted) return Promise.resolve();
+            greetingAudio.muted = false;
+            greetingAudio.volume = 1;
+            return greetingAudio.play()
+                .then(function () { greetingStarted = true; console.log('greeting: playing'); })
+                .catch(function (err) {
+                    // Muted playback needs no gesture. Start muted, then unmute —
+                    // some builds allow this where a plain play() is refused.
+                    greetingAudio.muted = true;
+                    return greetingAudio.play().then(function () {
+                        greetingAudio.muted = false;
+                        return new Promise(function (resolve, reject) {
+                            setTimeout(function () {
+                                if (greetingAudio.paused || greetingAudio.muted) {
+                                    greetingAudio.pause();
+                                    greetingAudio.currentTime = 0;
+                                    reject(err);
+                                } else {
+                                    greetingStarted = true;
+                                    console.log('greeting: playing (unmute path)');
+                                    resolve();
+                                }
+                            }, 80);
+                        });
+                    });
+                });
+        }
+
+        // Nothing appears until pange.png is actually decoded, otherwise the
+        // button and the flat background paint first and the photo pops in late.
+        (function () {
+            var splash = document.getElementById('welcomeScreen');
+            var btn = document.getElementById('enterButton');
+            var started = false;
+
+            function begin() {
+                if (started) return;
+                started = true;
+                console.log('greeting: attempting autoplay on load');
+                splash.style.animation = 'slowFadeIn 1.4s ease-out forwards';
+                setTimeout(function () { btn.style.opacity = '1'; }, 900);
+                playGreeting().catch(function (err) {
+                    console.warn('greeting did not autoplay:', err && err.name);
+                    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+                        document.addEventListener(ev, function retry() {
+                            document.removeEventListener(ev, retry, true);
+                            playGreeting().catch(function () {});
+                        }, true);
+                    });
+                });
+            }
+
+            var img = new Image();
+            img.onload = begin;
+            img.onerror = begin;
+            img.src = 'pange.png';
+            if (img.complete) begin();
+            setTimeout(begin, 5000);
+        })();
+    </script>
+    <style>
+        @keyframes slowFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        @keyframes slowFadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+    </style>
+
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <img src="pange.png" alt="Pangea" class="logo">
+                <div class="brand">
+                    <div class="brand-name">PANGEA</div>
+                </div>
+            </div>
+            <div class="header-center">
+                <button id="voiceBtn" class="voice-btn" onclick="toggleVoice()" title="Click to start/stop speaking to Pangea">
+                    <svg class="voice-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                        <path d="M5 10v2a7 7 0 0 0 14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                    </svg>
+                    <span id="voiceBtnLabel">Pangea</span>
+                </button>
+                <span id="voiceStatus" class="voice-status"></span>
+            </div>
+            <div class="header-right">
+                <button class="schedule-btn" id="ttsToggle" onclick="toggleTts()">Voice: on</button>
+                <button class="schedule-btn" onclick="openSchedule()">Operator schedule</button>
+            </div>
+        </div>
+
+        <!-- Left Sidebar -->
+        <div class="left-sidebar">
+            <div class="fleet-stats">
+                <div class="fleet-header">Global Fleet</div>
+                <div class="fleet-total" id="fleetTotal">142</div>
+                <div class="fleet-label">assets</div>
+
+                <div class="fleet-status">
+                    <div class="status-item">
+                        <div class="status-label">
+                            <span class="status-indicator operating"></span>
+                            <span>Operating</span>
+                        </div>
+                        <div class="status-value" id="statOperating">128</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">
+                            <span class="status-indicator attention"></span>
+                            <span>Attention</span>
+                        </div>
+                        <div class="status-value" id="statAttention">11</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">
+                            <span class="status-indicator offline"></span>
+                            <span>Offline</span>
+                        </div>
+                        <div class="status-value" id="statOffline">3</div>
+                    </div>
+                </div>
+
+                <div class="fleet-availability">
+                    <div class="availability-label">
+                        <span>Fleet availability</span>
+                    </div>
+                    <div class="availability-value">96.8%</div>
+                    <div class="availability-change">↑ +1.2% (7d)</div>
+                </div>
+            </div>
+
+            <!-- Total Output Card -->
+            <div class="fleet-stats" style="margin-top: 1.8rem; padding-top: 1.8rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
+                <div class="fleet-header">Total Output</div>
+                <div class="fleet-total" style="color: #38bdf8;" id="totalOutput">4,287 MW</div>
+                <div class="availability-change">↑ +6.3% (24h)</div>
+                <div class="chart-container" style="height: 60px; margin-top: 1rem;"><canvas id="totalChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Map Section -->
+            <div class="map-section">
+                <svg id="europeMap" class="world-map"></svg>
+                <div class="map-tooltip" id="mapTooltip"></div>
+
+                <div class="map-overlay">
+                    <div class="map-overlay-title">European Fleet Overview</div>
+                    <div class="map-overlay-sub" id="mapSub">5 sites • live</div>
+                </div>
+
+                <div class="map-legend">
+                    <span><span class="legend-glyph" style="color:#38bdf8;">●</span>Wind</span>
+                    <span><span class="legend-glyph" style="color:#fbbf24;">■</span>Solar</span>
+                    <span><span class="legend-glyph" style="color:#2dd4bf;">▲</span>Wave</span>
+                </div>
+
+                <div class="site-panel" id="sitePanel">
+                    <div class="sp-head">
+                        <div>
+                            <div class="sp-title" id="spTitle">—</div>
+                            <div class="sp-sub" id="spSub"></div>
+                        </div>
+                        <button class="sp-close" onclick="closeSitePanel()" aria-label="Close">×</button>
+                    </div>
+                    <div class="sp-body" id="spBody"></div>
+                </div>
+            </div>
+
+
+            <!-- Pangea AI (center) -->
+            <div class="ai-chat-section">
+                <div class="ai-header">
+                    <div class="ai-title">
+                        <div class="ai-avatar">P</div>
+                        <div>
+                            <div class="ai-name">Pangea AI</div>
+                            <div class="ai-status">
+                                <span class="status-dot pending" id="aiStatusDot"></span>
+                                <span id="aiStatusText">Connecting…</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="cursor: pointer; color: #64748b;">⋯</div>
+                </div>
+
+                <div class="ai-body"></div>
+
+                <div class="ai-input">
+                    <input id="chatInput" type="text" placeholder="Ask a question or give a command..." onkeydown="if(event.key==='Enter')sendChat()">
+                    <button class="send-button" onclick="sendChat()">➤</button>
+                </div>
+            </div>
+
+            <!-- Energy Grid -->
+            <div class="energy-grid">
+                <div class="energy-card">
+                    <div class="energy-header">
+                        <span class="energy-name">Wind</span>
+                    </div>
+                    <div class="energy-percentage" id="windPct">—</div>
+                    <div class="energy-label">of total output</div>
+                    <div class="sparkline-container"><canvas class="sparkline" id="windChart"></canvas></div>
+                </div>
+
+                <div class="energy-card">
+                    <div class="energy-header">
+                        <span class="energy-name">Solar</span>
+                    </div>
+                    <div class="energy-percentage" id="solarPct">—</div>
+                    <div class="energy-label">of total output</div>
+                    <div class="sparkline-container"><canvas class="sparkline" id="solarChart"></canvas></div>
+                </div>
+
+                <div class="energy-card">
+                    <div class="energy-header">
+                        <span class="energy-name">Wave</span>
+                    </div>
+                    <div class="energy-percentage" id="wavePct">—</div>
+                    <div class="energy-label">of total output</div>
+                    <div class="sparkline-container"><canvas class="sparkline" id="waveChart"></canvas></div>
+                </div>
+
+            </div>
+
+            <!-- Predicted Solar Output (live, from OpenShift AI model + Open-Meteo) -->
+            <div class="solar-section">
+                <div class="alerts-header" style="margin-bottom: 1rem;">
+                    <div class="section-title">Predicted Solar Output</div>
+                </div>
+                <div id="solarCards" class="solar-cards">
+                    <div class="solar-empty">Connecting to solar forecast…</div>
+                </div>
+            </div>
+
+            <!-- Predicted Wave Output (live, from the wave-energy model + Open-Meteo Marine) -->
+            <div class="solar-section">
+                <div class="alerts-header" style="margin-bottom: 1rem;">
+                    <div class="section-title">Predicted Wave Output</div>
+                </div>
+                <div id="waveCards" class="solar-cards">
+                    <div class="solar-empty">Connecting to wave forecast…</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="right-sidebar">
+            <!-- Alerts -->
+            <div class="alerts-section">
+                <div class="alerts-header">
+                    <div class="alerts-title">Active Alerts</div>
+                    <div class="view-all">View all →</div>
+                </div>
+
+                <div id="alertsList">
+                <div class="alert-item critical">
+                    <div class="alert-header-row">
+                        <div class="alert-title">
+                            <span class="alert-dot critical"></span>
+                            Turbine T-104 (North Sea)
+                        </div>
+                    </div>
+                    <div class="alert-message">Vibration increase detected</div>
+                    <div class="alert-time">2h ago</div>
+                </div>
+
+                <div class="alert-item warning">
+                    <div class="alert-header-row">
+                        <div class="alert-title">
+                            <span class="alert-dot warning"></span>
+                            Solar Array S-22 (Chile)
+                        </div>
+                    </div>
+                    <div class="alert-message">Output below expected</div>
+                    <div class="alert-time">4h ago</div>
+                </div>
+
+                <div class="alert-item critical">
+                    <div class="alert-header-row">
+                        <div class="alert-title">
+                            <span class="alert-dot critical"></span>
+                            Turbine T-047 (Brazil)
+                        </div>
+                    </div>
+                    <div class="alert-message">Bearing temperature rising</div>
+                    <div class="alert-time">5h ago</div>
+                </div>
+
+                <div class="alert-item warning">
+                    <div class="alert-header-row">
+                        <div class="alert-title">
+                            <span class="alert-dot warning"></span>
+                            Wind Farm W-12 (Australia)
+                        </div>
+                    </div>
+                    <div class="alert-message">Maintenance window due</div>
+                    <div class="alert-time">8h ago</div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Maintenance -->
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
+                <div class="alerts-header">
+                    <div class="alerts-title">Upcoming Maintenance</div>
+                    <div class="view-all">View all →</div>
+                </div>
+
+                <div class="maintenance-list">
+                    <div class="maintenance-list-item">
+                        <div class="maintenance-icon">📋</div>
+                        <div class="maintenance-details">
+                            <div class="maintenance-title">Turbine T-023</div>
+                            <div class="maintenance-subtitle">Gearbox inspection</div>
+                        </div>
+                        <div class="maintenance-date">In 5 days</div>
+                    </div>
+
+                    <div class="maintenance-list-item">
+                        <div class="maintenance-icon">☀️</div>
+                        <div class="maintenance-details">
+                            <div class="maintenance-title">Solar Array S-14</div>
+                            <div class="maintenance-subtitle">Panel cleaning</div>
+                        </div>
+                        <div class="maintenance-date">In 9 days</div>
+                    </div>
+
+                    <div class="maintenance-list-item">
+                        <div class="maintenance-icon">💨</div>
+                        <div class="maintenance-details">
+                            <div class="maintenance-title">Turbine T-067</div>
+                            <div class="maintenance-subtitle">Blade inspection</div>
+                        </div>
+                        <div class="maintenance-date">In 16 days</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Predictive Maintenance -->
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
+                <div class="alerts-header">
+                    <div class="alerts-title">Predictive Maintenance</div>
+                    <div class="view-all">View all →</div>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <div class="priority-badge high">High priority</div>
+                    <div class="turbine-id" style="margin-top: 0.8rem;">Turbine T-104</div>
+                    <div class="turbine-location">Blavand</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.6rem 0 1rem;">
+                        Rising main-shaft vibration. Est. failure: 12–18 days.
+                    </div>
+                    <div class="chart-container" style="height: 80px; margin-bottom: 1rem;"><canvas id="vibrationChart"></canvas></div>
+                    <button class="detail-button" style="width: 100%;">View details →</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Solar 5-day forecast modal -->
+    <!-- Shift-handover tour -->
+    <div class="tour-offer" id="tourOffer">
+        <div class="tour-eyebrow">Shift handover</div>
+        <div class="tour-heading">You have the watch</div>
+        <div class="tour-text">You're on as duty supervisor. Want a quick walkthrough of the fleet and what you can action from here?</div>
+        <div class="tour-actions">
+            <button class="tour-btn primary" onclick="startTour()">Start handover</button>
+            <button class="tour-btn ghost" onclick="dismissTourOffer()">Skip</button>
+        </div>
+    </div>
+
+    <div class="tour-spot tour-hidden" id="tourSpot"></div>
+    <div class="tour-card tour-hidden" id="tourCard">
+        <div class="tour-eyebrow" id="tourEyebrow">Shift handover</div>
+        <div class="tour-heading" id="tourTitle"></div>
+        <div class="tour-text" id="tourText"></div>
+        <div class="tour-actions">
+            <span class="tour-count" id="tourCount"></span>
+            <span class="tour-spacer"></span>
+            <button class="tour-btn ghost" onclick="endTour()">Skip</button>
+            <button class="tour-btn ghost" id="tourBack" onclick="tourGo(tourIdx - 1)">Back</button>
+            <button class="tour-btn primary" id="tourNext" onclick="tourGo(tourIdx + 1)">Next</button>
+        </div>
+    </div>
+
+    <div class="solar-modal-backdrop" id="solarModal" onclick="if(event.target===this)closeSolarForecast()">
+        <div class="solar-modal">
+            <div class="solar-modal-head">
+                <div class="solar-modal-title" id="solarModalTitle">Solar forecast</div>
+                <button class="solar-modal-close" onclick="closeSolarForecast()" aria-label="Close">×</button>
+            </div>
+            <div class="solar-modal-sub" id="solarModalSub"></div>
+            <div class="solar-modal-chart"><canvas id="solarForecastChart"></canvas></div>
+            <div class="solar-daily" id="solarModalDaily"></div>
+        </div>
+    </div>
+
+    <div class="solar-modal-backdrop" id="scheduleModal" onclick="if(event.target===this)closeSchedule()">
+        <div class="solar-modal sched-modal">
+            <div class="solar-modal-head">
+                <div class="solar-modal-title">Operator schedule</div>
+                <button class="solar-modal-close" onclick="closeSchedule()" aria-label="Close">×</button>
+            </div>
+            <div class="solar-modal-sub">Assign a work order and review technician availability.</div>
+
+            <div class="sched-section-title">New task</div>
+            <form class="sched-form" id="schedForm" onsubmit="submitTask(event)">
+                <div class="sched-field wide">
+                    <label for="schedTitle">Title</label>
+                    <input id="schedTitle" required placeholder="e.g. Pitch system calibration">
+                </div>
+                <div class="sched-field">
+                    <label for="schedTurbine">Turbine</label>
+                    <select id="schedTurbine" required></select>
+                </div>
+                <div class="sched-field">
+                    <label for="schedOperator">Assign to</label>
+                    <select id="schedOperator" onchange="syncShiftHint()"></select>
+                </div>
+                <div class="sched-field">
+                    <label for="schedType">Work type</label>
+                    <select id="schedType">
+                        <option value="preventive">Preventive</option>
+                        <option value="corrective">Corrective</option>
+                        <option value="inspection">Inspection</option>
+                        <option value="emergency">Emergency</option>
+                    </select>
+                </div>
+                <div class="sched-field">
+                    <label for="schedPriority">Priority</label>
+                    <select id="schedPriority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="sched-field">
+                    <label for="schedStart">Scheduled start</label>
+                    <input id="schedStart" type="datetime-local" onchange="syncShiftHint()">
+                </div>
+                <div class="sched-field">
+                    <label for="schedHours">Estimated hours</label>
+                    <input id="schedHours" type="number" step="0.5" min="0" placeholder="e.g. 8"
+                           onchange="syncShiftHint()">
+                </div>
+                <div class="sched-field sched-field-wide">
+                    <span class="sched-hint" id="schedShiftHint"></span>
+                </div>
+                <div class="sched-actions">
+                    <button class="sched-submit" id="schedSubmit" type="submit">Create task</button>
+                    <span class="sched-msg" id="schedMsg"></span>
+                </div>
+            </form>
+
+            <div class="sched-section-title">
+                <span>Two-week roster</span>
+                <span class="cal-legend">
+                    <span><i style="background:#38bdf8"></i>day</span>
+                    <span><i style="background:#818cf8"></i>night</span>
+                    <span><i style="background:#fbbf24"></i>on-call</span>
+                    <span><i style="background:#f87171"></i>leave</span>
+                    <span><i style="background:#334155"></i>off</span>
+                </span>
+            </div>
+            <div class="cal-wrap" id="schedCal"></div>
+        </div>
+    </div>
+
+    <script>
+        // Backend API base. Served same-origin: nginx reverse-proxies /api to the
+        // pangea-api Service. When opened as a local file this simply fails and the
+        // static demo values remain (graceful fallback).
+        const API_BASE = '/api';
+        const SESSION_ID = (crypto.randomUUID ? crypto.randomUUID()
+                            : String(Date.now()) + '-' + Math.random().toString(16).slice(2));
+        let vibrationChart = null;
+
+        // Voice capture -> /api/voice/transcribe -> Pangea AI chat input.
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // Hands-free conversation: auto-stop on silence, auto re-listen after Pangea speaks.
+        let conversationMode = false;
+        let audioCtx = null, vadAnalyser = null, vadRaf = null;
+        let vadSpeechSeen = false, vadSilenceStart = 0, vadStartedAt = 0;
+        const VAD_THRESHOLD = 0.015;   // RMS above this counts as speech
+        const VAD_SILENCE_MS = 650;    // trailing silence that ends a turn
+        const VAD_MAX_MS = 15000;      // hard cap on one utterance
+        const VAD_NOSPEECH_MS = 7000;  // silence with no speech -> end conversation
+
+        let voiceCancel = false;       // discard the in-flight burst
+        const DISMISS_RE = /^(?:no|nope|nah|no thanks?|nothing|that'?s all|that will be all|we'?re done|i'?m done|all done|stand ?by|goodbye|bye|dismiss(?:ed)?)[\s.!]*$/i;
+
+        function setVoiceStatus(msg) {
+            const el = document.getElementById('voiceStatus');
+            if (el) el.textContent = msg || '';
+        }
+
+        function setVoiceButton(state) {
+            const btn = document.getElementById('voiceBtn');
+            const label = document.getElementById('voiceBtnLabel');
+            if (!btn) return;
+            btn.classList.remove('recording', 'busy');
+            if (state === 'recording') {
+                btn.classList.add('recording');
+                if (label) label.textContent = 'Stop';
+            } else if (state === 'busy') {
+                btn.classList.add('busy');
+                if (label) label.textContent = 'Transcribing…';
+            } else {
+                if (label) label.textContent = 'Pangea';
+            }
+        }
+
+        // Clicking the mic starts (and joins) a hands-free conversation; clicking
+        // again while listening ends it.
+        function toggleVoice() {
+            if (isRecording) { conversationMode = false; stopVoice(); return; }
+            conversationMode = true;
+            startListening();
+        }
+
+
+
+        async function startListening() {
+            if (isRecording) return;
+            if (!navigator.mediaDevices || !window.MediaRecorder) {
+                setVoiceStatus('Voice not supported in this browser.');
+                conversationMode = false;
+                return;
+            }
+            stopSpeaking();   // never record Pangea's own voice
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = () => {
+                    const hadSpeech = vadSpeechSeen;
+                    stopVad();
+                    stream.getTracks().forEach(t => t.stop());
+                    sendAudio(new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' }), hadSpeech);
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                setVoiceButton('recording');
+                setVoiceStatus(conversationMode ? 'Listening… (click to end)' : 'Listening… click Stop when done.');
+                startVad(stream);
+            } catch (err) {
+                conversationMode = false;
+                setVoiceStatus('Microphone access denied.');
+            }
+        }
+
+        function stopVoice() {
+            if (mediaRecorder && isRecording) {
+                isRecording = false;
+                setVoiceButton('busy');
+                setVoiceStatus('Transcribing…');
+                mediaRecorder.stop();
+            }
+        }
+
+        // Voice-activity detection: auto-stop once the speaker goes quiet.
+        function startVad(stream) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(stream);
+                vadAnalyser = audioCtx.createAnalyser();
+                vadAnalyser.fftSize = 2048;
+                source.connect(vadAnalyser);
+                const buf = new Float32Array(vadAnalyser.fftSize);
+                vadSpeechSeen = false;
+                vadSilenceStart = 0;
+                vadStartedAt = performance.now();
+                const tick = () => {
+                    if (!isRecording || !vadAnalyser) return;
+                    vadAnalyser.getFloatTimeDomainData(buf);
+                    let sum = 0;
+                    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+                    const rms = Math.sqrt(sum / buf.length);
+                    const now = performance.now();
+                    if (rms > VAD_THRESHOLD) {
+                        vadSpeechSeen = true;
+                        vadSilenceStart = 0;
+                    } else if (vadSpeechSeen) {
+                        if (!vadSilenceStart) vadSilenceStart = now;
+                        else if (now - vadSilenceStart > VAD_SILENCE_MS) { stopVoice(); return; }
+                    }
+                    if (now - vadStartedAt > VAD_MAX_MS) { stopVoice(); return; }
+                    if (!vadSpeechSeen && now - vadStartedAt > VAD_NOSPEECH_MS) { stopVoice(); return; }
+                    vadRaf = requestAnimationFrame(tick);
+                };
+                vadRaf = requestAnimationFrame(tick);
+            } catch (e) {
+                // No Web Audio -> fall back to manual/click-to-stop.
+            }
+        }
+
+        function stopVad() {
+            if (vadRaf) { cancelAnimationFrame(vadRaf); vadRaf = null; }
+            if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
+            vadAnalyser = null;
+        }
+
+        // Re-open the mic for the next turn once Pangea has finished replying.
+        function maybeRelisten() {
+            if (conversationMode && !isRecording) {
+                setTimeout(() => { if (conversationMode && !isRecording) startListening(); }, 350);
+            }
+        }
+
+        async function sendAudio(blob, hadSpeech = true) {
+            // Wake toggled off mid-burst: throw this clip away.
+            if (voiceCancel) { voiceCancel = false; setVoiceButton('idle'); setVoiceStatus(''); return; }
+
+            // Nothing was said this burst.
+            if (!hadSpeech) {
+                setVoiceButton('idle');
+                if (conversationMode) { conversationMode = false; setVoiceStatus(''); return; }
+                setVoiceStatus('');
+                return;
+            }
+            try {
+                const form = new FormData();
+                form.append('audio', blob, 'clip.webm');
+                const t0 = performance.now();
+                const res = await fetch(API_BASE + '/voice/transcribe', { method: 'POST', body: form });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const text = (data.text || '').trim();
+                setVoiceButton('idle');
+
+                // Explicit mic conversation / single shot.
+                if (text) {
+                    setVoiceStatus('“' + text + '”');
+                    sendChat(text);   // reply streams, then speaker -> maybeRelisten()
+                } else if (conversationMode) {
+                    setVoiceStatus('Didn’t catch that.');
+                    maybeRelisten();
+                } else {
+                    setVoiceStatus('Didn’t catch that — try again.');
+                }
+            } catch (err) {
+                setVoiceButton('idle');
+                conversationMode = false;
+                setVoiceStatus('Transcription failed. Is the model up?');
+            }
+        }
+
+        // ---- Pangea agent chat (grounded in current UI state) ----------------
+        // Snapshot of what the supervisor is currently looking at, sent with each
+        // question so the assistant answers from real values, not a screenshot.
+        // Running conversation for multi-turn context. Only successful turns are
+        // kept; the backend replays the last few into each request.
+        let chatHistory = [];   // [{role:'user'|'assistant', content}]
+        let siteByCode = {};
+
+        function siteSnapshot(s, turbines) {
+            if (!s) return null;
+            const r = v => (v == null ? null : Math.round(v * 10) / 10);
+            const type = siteType(s);
+            const wind = windBySite[s.site_code];
+            const pred = (type.label === 'Wave' ? waveBySite : solarBySite)[s.site_code];
+            const isTurbineSite = s.turbine_count > 0;
+
+            const liveMw = isTurbineSite
+                ? (s.live_output_mw || 0)
+                : (pred ? pred.actual_now_kw / 1000 : 0);
+            let ratedKw = s.capacity_kw || 0;
+            if (!ratedKw && turbines && turbines.length) {
+                ratedKw = turbines.reduce((a, t) => a + (t.rated_power_kw || 0), 0);
+            }
+
+            const snap = {
+                code: s.site_code, name: s.site_name, energy_type: type.label,
+                city: s.nearest_city, country: s.country, status: s.status,
+                live_output_mw: r(liveMw),
+                rated_capacity_mw: ratedKw ? r(ratedKw / 1000) : null
+            };
+            if (isTurbineSite) {
+                snap.turbines = {
+                    total: s.turbine_count, operational: s.operational,
+                    maintenance: s.maintenance, offline: s.offline
+                };
+            }
+            if (wind) {
+                snap.wind_ms = wind.wind_speed_ms;
+                snap.gust_ms = wind.gust_ms;
+                snap.cutout_ms = wind.cutout_ms;
+                snap.shutdown = wind.shutdown;
+            }
+            if (pred) {
+                snap.predicted_now_mw = r((pred.predicted_now_kw || 0) / 1000);
+                snap.residual_pct = pred.residual_pct;
+                if (pred.cloud_cover_pct != null) snap.cloud_cover_pct = r(pred.cloud_cover_pct);
+            }
+            snap.open_alerts = (activeAlerts || [])
+                .filter(a => a.site_name === s.site_name)
+                .map(a => ({ title: a.title, severity: a.severity, turbine: a.turbine_code }));
+            snap.scheduled_work = (maintenanceTasks || [])
+                .filter(t => t.site_name === s.site_name)
+                .map(t => ({ title: t.title, priority: t.priority, status: t.status,
+                             turbine: t.turbine_code, scheduled_start: t.scheduled_start,
+                             assigned_operative: t.assigned_operative }));
+            return snap;
+        }
+
+        function buildUiContext() {
+            const r = v => (v == null ? null : Math.round(v * 10) / 10);
+            const site = s => s && ({
+                code: s.site_code, name: s.site_name, status: s.status,
+                predicted_kw: Math.round(s.predicted_now_kw || 0),
+                actual_kw: Math.round(s.actual_now_kw || 0),
+                residual_pct: s.residual_pct
+            });
+            return {
+                view: openForecast ? 'forecast_modal' : 'dashboard',
+                open_forecast: openForecast,
+                open_site: siteSnapshot(sitePanelSite, sitePanelTurbines),
+                totals_mw: {
+                    wind: r(windOutputMw), solar: r(solarOutputMw), wave: r(waveOutputMw),
+                    total: r((windOutputMw || 0) + (solarOutputMw || 0) + (waveOutputMw || 0))
+                },
+                solar_sites: Object.values(solarBySite).map(s => ({
+                    ...site(s),
+                    cloud_cover_pct: r(s.cloud_cover_pct),
+                    irradiance_wm2: Math.round(s.irradiance_wm2 || 0)
+                })),
+                wave_sites: Object.values(waveBySite).map(site),
+                wind_sites: Object.values(windBySite).map(w => {
+                    const s = siteByCode[w.site_code] || {};
+                    return {
+                        code: w.site_code, name: w.site_name, status: w.status,
+                        country: s.country, city: s.nearest_city,
+                        live_output_mw: r(s.live_output_mw),
+                        rated_capacity_mw: s.capacity_kw ? r(s.capacity_kw / 1000) : null,
+                        turbines_total: s.turbine_count,
+                        turbines_operational: s.operational,
+                        turbines_maintenance: s.maintenance,
+                        turbines_offline: s.offline,
+                        wind_ms: w.wind_speed_ms, gust_ms: w.gust_ms,
+                        cutout_ms: w.cutout_ms, shutdown: w.shutdown
+                    };
+                }),
+                active_alerts: (activeAlerts || []).slice(0, 10).map(a => ({
+                    title: a.title, severity: a.severity,
+                    turbine: a.turbine_code, site: a.site_name
+                })),
+                maintenance_tasks: (maintenanceTasks || []).slice(0, 10).map(w => ({
+                    id: w.work_order_number, title: w.title, type: w.work_type,
+                    priority: w.priority, status: w.status,
+                    turbine: w.turbine_code, site: w.site_name,
+                    scheduled_start: w.scheduled_start
+                })),
+                at: new Date().toISOString()
+            };
+        }
+
+        function startThinking(bubble) {
+            bubble.textContent = '';
+            const ind = document.createElement('span');
+            ind.className = 'thinking-binary';
+            const N = 16;
+            for (let i = 0; i < N; i++) {
+                const d = document.createElement('span');
+                d.textContent = Math.random() < 0.5 ? '0' : '1';
+                ind.appendChild(d);
+            }
+            bubble.appendChild(ind);
+            const digits = ind.children;
+            const timer = setInterval(() => {
+                for (let i = 0; i < digits.length; i++) {
+                    if (Math.random() < 0.35) {
+                        digits[i].textContent = Math.random() < 0.5 ? '0' : '1';
+                        digits[i].style.opacity = (0.3 + Math.random() * 0.7).toFixed(2);
+                    }
+                }
+            }, 110);
+            return () => clearInterval(timer);
+        }
+
+        // Reverse-chronological: newest message goes to the top, nearest the map,
+        // so a reply sits above the question that prompted it.
+        function appendChat(role, text) {
+            const body = document.querySelector('.ai-body');
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-msg ' + role;
+            wrap.innerHTML = '<div class="chat-role">' + (role === 'user' ? 'You' : 'Pangea') + '</div>';
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble';
+            bubble.textContent = text;
+            wrap.appendChild(bubble);
+            body.insertBefore(wrap, body.firstChild);
+            body.scrollTop = 0;
+            return bubble;
+        }
+
+        // A mock-up of the assigned technician's phone, shown once a dispatch
+        // actually commits. Cosmetic: nothing is sent anywhere.
+        let phoneTimer = null;
+
+        function showPhoneNotification({ recipient, title, body, removed }) {
+            const old = document.getElementById('phoneSim');
+            if (old) old.remove();
+            clearTimeout(phoneTimer);
+
+            const now = new Date();
+            const el = document.createElement('div');
+            el.className = 'phone-sim';
+            el.id = 'phoneSim';
+
+            const mk = (cls, text) => {
+                const d = document.createElement('div');
+                d.className = cls;
+                if (text != null) d.textContent = text;
+                return d;
+            };
+
+            const screen = mk('phone-screen');
+            screen.appendChild(mk('phone-notch'));
+            screen.appendChild(mk('phone-clock', now.toLocaleTimeString(
+                [], { hour: '2-digit', minute: '2-digit' })));
+            screen.appendChild(mk('phone-date', now.toLocaleDateString(
+                undefined, { weekday: 'long', day: 'numeric', month: 'long' })));
+
+            const note = mk('phone-note' + (removed ? ' removed' : ''));
+            const head = mk('phone-note-head');
+            const icon = mk('phone-note-icon', 'P');
+            head.append(icon, mk('', 'Pangea'), mk('phone-note-ago', 'now'));
+            head.children[1].style.textTransform = 'uppercase';
+            note.append(head, mk('phone-note-title', title), mk('phone-note-body', body));
+            screen.appendChild(note);
+
+            const bodyWrap = mk('phone-body');
+            bodyWrap.appendChild(screen);
+            el.appendChild(bodyWrap);
+            el.appendChild(mk('phone-to', recipient ? `${recipient}'s phone` : ''));
+
+            el.onclick = () => hidePhoneNotification();
+            document.body.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('in'));
+            phoneTimer = setTimeout(hidePhoneNotification, 7000);
+        }
+
+        function hidePhoneNotification() {
+            const el = document.getElementById('phoneSim');
+            if (!el) return;
+            el.classList.remove('in');
+            setTimeout(() => el.remove(), 400);
+        }
+
+        // Turn a confirmed action into what the technician would actually see.
+        function phoneForAction(card, data) {
+            const field = (label) => (card.fields || [])
+                .find(f => f.label === label)?.value || '';
+            const wo = data.work_order || {};
+            const job = wo.title || field('Work order');
+            // Titles already lead with the turbine code, so don't say it twice.
+            const where = wo.site_name
+                ? (job.includes(wo.turbine_code) ? wo.site_name
+                                                 : `${wo.turbine_code} · ${wo.site_name}`)
+                : field('Turbine');
+            const when = field('Starts');
+
+            if (card.action === 'unassign_work') {
+                const name = field('Remove').split(' (')[0];
+                return { recipient: name, removed: true, title: 'Job removed',
+                         body: `${job} — ${where}. You are no longer assigned.` };
+            }
+            const name = (field('Assign to') || field('Assigned to')).split(' (')[0];
+            if (!name || name === 'Unassigned') return null;
+            return { recipient: name, removed: false, title: 'New job assigned',
+                     body: `${job} — ${where}${when ? `. Starts ${when}` : ''}.` };
+        }
+
+        // DOM nodes rather than markup, so titles cannot inject anything.
+        function renderConfirmCard(bubble, card) {
+            const el = document.createElement('div');
+            el.className = 'confirm-card';
+
+            const head = document.createElement('div');
+            head.className = 'confirm-head';
+            head.textContent = card.summary;
+            el.appendChild(head);
+
+            for (const f of card.fields || []) {
+                const row = document.createElement('div');
+                row.className = 'confirm-row';
+                const k = document.createElement('span');
+                k.className = 'confirm-k';
+                k.textContent = f.label;
+                const v = document.createElement('span');
+                v.className = 'confirm-v';
+                v.textContent = f.value;
+                row.append(k, v);
+                el.appendChild(row);
+            }
+
+            for (const w of card.warnings || []) {
+                const warn = document.createElement('div');
+                warn.className = 'confirm-warn';
+                warn.textContent = w;
+                el.appendChild(warn);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'confirm-actions';
+            const yes = document.createElement('button');
+            yes.className = 'confirm-yes';
+            yes.textContent = 'Confirm';
+            const no = document.createElement('button');
+            no.className = 'confirm-no';
+            no.textContent = 'Cancel';
+            const status = document.createElement('span');
+            status.className = 'confirm-status';
+
+            const settle = (text, cls) => {
+                yes.remove(); no.remove();
+                status.textContent = text;
+                status.className = 'confirm-status ' + cls;
+            };
+
+            const act = async (verb) => {
+                yes.disabled = no.disabled = true;
+                status.textContent = verb === 'confirm' ? 'Booking…' : 'Cancelling…';
+                try {
+                    const res = await fetch(
+                        `${API_BASE}/agent/actions/${card.action_id}/${verb}`,
+                        { method: 'POST' });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        settle(data.detail || `Could not ${verb} that.`, 'err');
+                        return;
+                    }
+                    const done = card.action === 'unassign_work'
+                        ? 'Unassigned.'
+                        : `Booked as ${data.work_order.work_order_number}.`;
+                    settle(verb === 'confirm' ? done : 'Cancelled — nothing was booked.',
+                           verb === 'confirm' ? 'ok' : 'muted');
+                    if (verb === 'confirm') {
+                        const note = phoneForAction(card, data);
+                        if (note) showPhoneNotification(note);
+                    }
+                } catch (e) {
+                    yes.disabled = no.disabled = false;
+                    status.textContent = 'Could not reach the API.';
+                    status.className = 'confirm-status err';
+                }
+            };
+
+            yes.onclick = () => act('confirm');
+            no.onclick = () => act('cancel');
+            actions.append(yes, no, status);
+            el.appendChild(actions);
+            bubble.appendChild(el);
+        }
+
+        async function sendChat(text) {
+            const input = document.getElementById('chatInput');
+            let msg = (text != null ? text : (input ? input.value : '')).trim();
+            // Spoken questions often open with "Pangea, ..."; drop the address.
+            msg = msg.replace(/^\s*pangea\b[\s,.:;!?-]*/i, '').trim();
+            if (!msg) return;
+            if (input && text == null) input.value = '';
+            appendChat('user', msg);
+            const bubble = appendChat('assistant', '');
+            const stopThinking = startThinking(bubble);
+            const body = document.querySelector('.ai-body');
+            const speaker = ttsEnabled ? startStreamingSpeech() : null;
+            let spokenBuf = '';
+            try {
+                const res = await fetch(API_BASE + '/agent/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, ui_context: buildUiContext(), history: chatHistory, session_id: SESSION_ID })
+                });
+                if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let reply = '';
+                let streamErr = null;
+                let card = null;
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop();
+                    for (const evt of events) {
+                        const dataLine = evt.split('\n').find(l => l.startsWith('data:'));
+                        if (!dataLine) continue;
+                        let payload;
+                        try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+                        if (payload.error) { streamErr = payload.error; continue; }
+                        // Nothing is written until Confirm is pressed.
+                        if (payload.card) { card = payload.card; continue; }
+                        if (payload.delta) {
+                            if (!reply) { stopThinking(); bubble.textContent = ''; }
+                            reply += payload.delta;
+                            bubble.textContent = reply;
+                            body.scrollTop = 0;
+                            if (speaker) {
+                                spokenBuf += payload.delta;
+                                let r;
+                                while ((r = nextSentence(spokenBuf))) {
+                                    speaker.push(r.sentence);
+                                    spokenBuf = r.rest;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                reply = reply.trim();
+                if (!reply && !card) {
+                    stopThinking();
+                    bubble.textContent = streamErr || '(no response)';
+                    if (speaker) speaker.end(); else maybeRelisten();
+                    return;
+                }
+                stopThinking();
+                bubble.textContent = reply;
+                if (card) renderConfirmCard(bubble, card);
+                // Remember this turn and cap growth (backend replays the last 6).
+                chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
+                if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+                if (speaker) { speaker.push(spokenBuf); speaker.end(); } else { maybeRelisten(); }
+            } catch (e) {
+                stopThinking();
+                bubble.textContent = 'Pangea is offline right now — the assistant model isn’t deployed yet.';
+                stopSpeaking();
+                maybeRelisten();
+            }
+        }
+
+        // ---- Text-to-speech: Pangea reads its replies aloud (Kokoro via /api/voice/speak) ----
+        let ttsEnabled = true;
+        let ttsAudioEl = null;
+        let ttsUnlocked = false;
+        let ttsObjectUrl = null;
+        // 44-byte silent WAV, played muted inside a user gesture to grant autoplay
+        // permission on the reused element so later async replies can speak (Safari).
+        const TTS_SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
+        let ttsGen = 0;
+        let ttsEndCurrent = null;
+
+        function getTtsEl() {
+            if (!ttsAudioEl) ttsAudioEl = new Audio();
+            return ttsAudioEl;
+        }
+
+        function unlockTts() {
+            if (ttsUnlocked) return;
+            const el = getTtsEl();
+            el.muted = true;
+            el.src = TTS_SILENCE;
+            el.play().then(() => {
+                el.pause();
+                el.currentTime = 0;
+                el.muted = false;
+                ttsUnlocked = true;
+            }).catch(() => { el.muted = false; });
+        }
+        ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
+            document.addEventListener(ev, unlockTts, true));
+
+        function stopSpeaking() {
+            ttsGen++;
+            if (ttsAudioEl) { ttsAudioEl.pause(); ttsAudioEl.currentTime = 0; }
+            if (ttsEndCurrent) ttsEndCurrent();
+            if (ttsObjectUrl) { URL.revokeObjectURL(ttsObjectUrl); ttsObjectUrl = null; }
+        }
+
+        function toggleTts() {
+            ttsEnabled = !ttsEnabled;
+            if (!ttsEnabled) stopSpeaking();
+            const btn = document.getElementById('ttsToggle');
+            if (btn) btn.textContent = ttsEnabled ? 'Voice: on' : 'Voice: off';
+        }
+
+        function nextSentence(buf) {
+            const m = buf.match(/^([\s\S]*?[.!?…]+["')\]]*)\s+/);
+            if (!m) return null;
+            return { sentence: m[1].trim(), rest: buf.slice(m[0].length) };
+        }
+
+        async function fetchSpeech(text) {
+            const res = await fetch(API_BASE + '/voice/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.blob();
+        }
+
+        function playBlob(el, blob) {
+            return new Promise((resolve) => {
+                const url = URL.createObjectURL(blob);
+                ttsObjectUrl = url;
+                const done = () => {
+                    el.removeEventListener('ended', done);
+                    el.removeEventListener('error', done);
+                    if (ttsObjectUrl === url) { URL.revokeObjectURL(url); ttsObjectUrl = null; }
+                    ttsEndCurrent = null;
+                    resolve();
+                };
+                ttsEndCurrent = done;
+                el.addEventListener('ended', done);
+                el.addEventListener('error', done);
+                el.src = url;
+                el.muted = false;
+                el.play().catch(() => done());
+            });
+        }
+
+        // One-shot playback for an unprompted announcement, as opposed to the
+        // sentence-by-sentence streaming used while the assistant is replying.
+        async function speakOnce(text) {
+            try {
+                stopSpeaking();
+                await playBlob(getTtsEl(), await fetchSpeech(text));
+            } catch (e) { /* Kokoro unavailable - the alert is still on screen */ }
+        }
+
+        function startStreamingSpeech() {
+            stopSpeaking();
+            const gen = ++ttsGen;
+            const el = getTtsEl();
+            const queue = [];
+            let waiter = null;
+            let producerDone = false;
+
+            function push(t) {
+                t = (t || '').trim();
+                if (!t) return;
+                queue.push(t);
+                if (waiter) { const w = waiter; waiter = null; w(); }
+            }
+            function end() {
+                producerDone = true;
+                if (waiter) { const w = waiter; waiter = null; w(); }
+            }
+            async function nextText() {
+                while (!queue.length && !producerDone) {
+                    await new Promise(r => { waiter = r; });
+                }
+                return queue.length ? queue.shift() : null;
+            }
+            async function run() {
+                try {
+                    const first = await nextText();
+                    if (first == null) return;
+                    let fetchP = fetchSpeech(first).catch(() => null);
+                    while (fetchP) {
+                        const blob = await fetchP;
+                        if (gen !== ttsGen) return;
+                        const playP = blob ? playBlob(el, blob) : Promise.resolve();
+                        const upcoming = await nextText();
+                        fetchP = upcoming != null ? fetchSpeech(upcoming).catch(() => null) : null;
+                        await playP;
+                        if (gen !== ttsGen) return;
+                    }
+                } finally {
+                    if (gen === ttsGen) maybeRelisten();
+                }
+            }
+            run();
+            return { push, end };
+        }
+
+        // Reset multi-turn memory (e.g. to start a fresh conversation).
+        function resetChat() { chatHistory = []; }
+
+        // greetingAudio / playGreeting() are defined in their own block next to
+        // the welcome screen so the greeting starts at parse time.
+        let dashboardEntered = false;
+        function enterDashboard() {
+            if (dashboardEntered) return;
+            dashboardEntered = true;
+
+            const welcome = document.getElementById('welcomeScreen');
+            const btn = document.getElementById('enterButton');
+            if (btn) { btn.style.opacity = '0'; btn.style.pointerEvents = 'none'; }
+
+            // This click is the first gesture when autoplay was refused, so it is
+            // also where the greeting starts. It then plays on over the dashboard
+            // rather than being waited for or cut short.
+            if (!greetingStarted) playGreeting().catch(() => {});
+
+            document.getElementById('appContainer').classList.add('active');
+            setTimeout(initializeCharts, 200);
+
+            if (welcome) {
+                welcome.style.animation = 'slowFadeOut 1.2s ease forwards';
+                setTimeout(() => { welcome.style.display = 'none'; }, 1300);
+            }
+
+            setTimeout(showTourOffer, 1600);
+        }
+
+        const TOUR_STEPS = [
+            {
+                sel: null,
+                title: 'You have the watch',
+                text: "You're the duty supervisor for the Pangea fleet — wind, solar and wave sites across northern Europe. This is the short version of the handover."
+            },
+            {
+                sel: '.left-sidebar',
+                title: 'Fleet at a glance',
+                text: 'Turbines by status, and live output against rated capacity. Everything here refreshes every thirty seconds on its own.'
+            },
+            {
+                sel: '.map-section',
+                title: 'Your sites',
+                text: 'Each dot is a site — the shape tells you the energy type, a red dashed ring means it is shut down for storm protection. Click a dot for its turbines, open alerts and scheduled work. Drag to pan, scroll to zoom.'
+            },
+            {
+                sel: '.ai-chat-section',
+                title: 'Ask Pangea',
+                text: 'Pangea reads the same live fleet data you are looking at. Ask about a specific site, an alert, or what needs your attention this shift.'
+            },
+            {
+                sel: '.right-sidebar',
+                title: 'Alerts and work orders',
+                text: 'Active alerts up top, open maintenance below. Operator schedule is where you raise a task and assign it to someone on shift.'
+            },
+            {
+                sel: '#solarCards',
+                title: 'Predicted output',
+                text: 'Model forecasts against live readings. A wide gap between predicted and actual is usually worth investigating.'
+            }
+        ];
+
+        let tourIdx = -1;
+
+        function showTourOffer() {
+            const el = document.getElementById('tourOffer');
+            if (el && tourIdx < 0) el.classList.add('show');
+        }
+
+        function dismissTourOffer() {
+            const el = document.getElementById('tourOffer');
+            if (el) el.classList.remove('show');
+        }
+
+        function startTour() {
+            dismissTourOffer();
+            tourGo(0, 1);
+        }
+
+        function endTour() {
+            tourIdx = -1;
+            document.getElementById('tourSpot').classList.add('tour-hidden');
+            document.getElementById('tourCard').classList.add('tour-hidden');
+        }
+
+        function tourGo(n, dir) {
+            dir = dir || (n >= tourIdx ? 1 : -1);
+            if (n < 0 || n >= TOUR_STEPS.length) { endTour(); return; }
+
+            const step = TOUR_STEPS[n];
+            const target = step.sel ? document.querySelector(step.sel) : null;
+            // Sidebars are display:none on narrow viewports — step over anything
+            // that isn't actually on screen rather than spotlighting nothing.
+            if (step.sel && (!target || target.offsetWidth === 0)) { tourGo(n + dir, dir); return; }
+
+            tourIdx = n;
+            const spot = document.getElementById('tourSpot');
+            const card = document.getElementById('tourCard');
+
+            document.getElementById('tourTitle').textContent = step.title;
+            document.getElementById('tourText').textContent = step.text;
+            document.getElementById('tourCount').textContent = (n + 1) + ' of ' + TOUR_STEPS.length;
+            document.getElementById('tourBack').classList.toggle('tour-hidden', n === 0);
+            document.getElementById('tourNext').textContent =
+                n === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+            card.classList.remove('tour-hidden');
+
+            if (!target) {
+                spot.classList.add('tour-hidden');
+                card.style.top = '50%';
+                card.style.left = '50%';
+                card.style.transform = 'translate(-50%, -50%)';
+                return;
+            }
+
+            card.style.transform = 'none';
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => positionTour(target, spot, card), 340);
+        }
+
+        function positionTour(target, spot, card) {
+            const r = target.getBoundingClientRect();
+            const pad = 8;
+            spot.classList.remove('tour-hidden');
+            spot.style.top = (r.top - pad) + 'px';
+            spot.style.left = (r.left - pad) + 'px';
+            spot.style.width = (r.width + pad * 2) + 'px';
+            spot.style.height = (r.height + pad * 2) + 'px';
+
+            const cw = card.offsetWidth, ch = card.offsetHeight, gap = 16;
+            let top = r.bottom + gap;
+            if (top + ch > window.innerHeight - 12) top = r.top - ch - gap;
+            if (top < 12) top = Math.max(12, (window.innerHeight - ch) / 2);
+            let left = r.left + r.width / 2 - cw / 2;
+            left = Math.max(12, Math.min(left, window.innerWidth - cw - 12));
+            card.style.top = top + 'px';
+            card.style.left = left + 'px';
+        }
+
+        document.addEventListener('keydown', (ev) => {
+            if (tourIdx < 0) return;
+            if (ev.key === 'Escape') endTour();
+            else if (ev.key === 'ArrowRight') tourGo(tourIdx + 1, 1);
+            else if (ev.key === 'ArrowLeft') tourGo(tourIdx - 1, -1);
+        });
+
+        window.addEventListener('resize', () => {
+            if (tourIdx < 0) return;
+            const step = TOUR_STEPS[tourIdx];
+            const target = step.sel ? document.querySelector(step.sel) : null;
+            if (target) {
+                positionTour(target, document.getElementById('tourSpot'),
+                             document.getElementById('tourCard'));
+            }
+        });
+
+        // Debug image loading
+        window.addEventListener('load', function() {
+            const img = document.querySelector('#welcomeScreen img');
+            if (img) {
+                console.log('Image element found');
+                console.log('Image src:', img.src);
+                console.log('Image complete:', img.complete);
+                console.log('Image naturalWidth:', img.naturalWidth);
+                img.onerror = function() {
+                    console.error('IMAGE FAILED TO LOAD!');
+                    console.error('Attempted src:', this.src);
+                };
+                img.onload = function() {
+                    console.log('IMAGE LOADED SUCCESSFULLY!');
+                };
+            } else {
+                console.error('NO IMAGE ELEMENT FOUND!');
+            }
+        });
+
+        // Create sparkline charts
+        function createSparkline(id, data, color) {
+            const ctx = document.getElementById(id).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(data.length).fill(''),
+                    datasets: [{
+                        data: data,
+                        borderColor: color,
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Initialize all charts
+        function initializeCharts() {
+            console.log('Initializing charts...');
+            try {
+                createSparkline('windChart', [45, 48, 52, 49, 54, 58, 55, 60, 62, 65], '#38bdf8');
+                createSparkline('solarChart', [20, 22, 25, 23, 26, 24, 27, 25, 28, 26], '#fbbf24');
+                createSparkline('waveChart', [30, 28, 32, 35, 33, 36, 34, 38, 37, 40], '#2dd4bf');
+                createSparkline('totalChart', [72, 78, 87, 80, 91, 89, 93, 96, 99, 102], '#34d399');
+
+                // Vibration chart
+                const vCtx = document.getElementById('vibrationChart').getContext('2d');
+                vibrationChart = new Chart(vCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Apr 10', '', '', 'Apr 17', '', '', 'Apr 24'],
+                        datasets: [{
+                            data: [4, 5, 6, 7, 8, 10, 12],
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                grid: { display: false, color: 'rgba(56, 189, 248, 0.1)' },
+                                ticks: { color: '#64748b', font: { size: 9 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(56, 189, 248, 0.1)' },
+                                ticks: { color: '#64748b', font: { size: 9 } }
+                            }
+                        }
+                    }
+                });
+                console.log('Charts initialized successfully');
+                loadVibration();
+                renderEuropeMap();
+            } catch (error) {
+                console.error('Error initializing charts:', error);
+            }
+        }
+
+        // ---- Live data from the backend API -------------------------------
+
+        async function apiGet(path) {
+            const res = await fetch(API_BASE + path, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error(path + ' -> ' + res.status);
+            return res.json();
+        }
+
+        // Live output split so Total Output = wind turbines + solar + wave plants.
+        let windOutputMw = null;   // from /fleet/status
+        let solarOutputMw = null;  // summed from /solar/predict
+        let waveOutputMw = null;   // summed from /wave/predict
+
+        // UI state used to ground the assistant ("what am I looking at?").
+        let openForecast = null;   // {kind, site_code, site_name} when a modal is open
+        let activeAlerts = [];     // latest /alerts?status=active
+        let maintenanceTasks = []; // latest /maintenance (open work orders)
+
+        function renderTotalOutput() {
+            if (windOutputMw === null && solarOutputMw === null && waveOutputMw === null) return;  // nothing live yet
+            const wind = windOutputMw || 0, solar = solarOutputMw || 0, wave = waveOutputMw || 0;
+            const total = wind + solar + wave;
+            document.getElementById('totalOutput').textContent =
+                Math.round(total).toLocaleString() + ' MW';
+            // Live share of total output per source (below the map).
+            const pct = v => total > 0 ? (v / total * 100).toFixed(1) + '%' : '—';
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('windPct', pct(wind));
+            set('solarPct', pct(solar));
+            set('wavePct', pct(wave));
+        }
+
+        // Global Fleet + Total Output
+        async function loadFleet() {
+            try {
+                const f = await apiGet('/fleet/status');
+                const counts = {};
+                (f.by_status || []).forEach(s => { counts[s.status] = s.count; });
+                document.getElementById('fleetTotal').textContent = f.total_turbines;
+                document.getElementById('statOperating').textContent = counts['operational'] || 0;
+                document.getElementById('statAttention').textContent = counts['maintenance'] || 0;
+                document.getElementById('statOffline').textContent = counts['offline'] || 0;
+                windOutputMw = f.live_output_mw;
+                renderTotalOutput();
+            } catch (e) {
+                console.warn('loadFleet failed, keeping static values:', e.message);
+            }
+        }
+
+        function relativeTime(iso) {
+            const secs = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+            if (secs < 3600) return Math.round(secs / 60) + 'm ago';
+            if (secs < 86400) return Math.round(secs / 3600) + 'h ago';
+            return Math.round(secs / 86400) + 'd ago';
+        }
+
+        // Active Alerts
+        async function loadAlerts() {
+            try {
+                const alerts = await apiGet('/alerts?status=active');
+                activeAlerts = alerts;
+                const list = document.getElementById('alertsList');
+                if (!alerts.length) return;
+                list.innerHTML = alerts.map(a => {
+                    const sev = (a.severity === 'critical' || a.severity === 'emergency') ? 'critical' : 'warning';
+                    const where = [a.turbine_code, a.site_name].filter(Boolean).join(' · ');
+                    return `
+                        <div class="alert-item ${sev}">
+                            <div class="alert-header-row">
+                                <div class="alert-title">
+                                    <span class="alert-dot ${sev}"></span>
+                                    ${a.title}${where ? ' (' + where + ')' : ''}
+                                </div>
+                            </div>
+                            <div class="alert-message">${a.message}</div>
+                            <div class="alert-time">${relativeTime(a.alert_time)}</div>
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                console.warn('loadAlerts failed, keeping static values:', e.message);
+            }
+        }
+
+        async function loadMaintenance() {
+            try {
+                maintenanceTasks = await apiGet('/maintenance');
+            } catch (e) {
+                console.warn('loadMaintenance failed:', e.message);
+            }
+        }
+
+        // Predictive Maintenance vibration trend (showcase turbine NSO-04)
+        async function loadVibration() {
+            if (!vibrationChart) return;
+            try {
+                const readings = await apiGet('/turbines/NSO-04/readings?hours=48');
+                if (!readings.length) return;
+                const step = Math.max(1, Math.floor(readings.length / 7));
+                const sampled = readings.filter((_, i) => i % step === 0);
+                vibrationChart.data.labels = sampled.map(r =>
+                    new Date(r.reading_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+                vibrationChart.data.datasets[0].data = sampled.map(r => r.vibration_x_mms);
+                vibrationChart.update();
+            } catch (e) {
+                console.warn('loadVibration failed, keeping static values:', e.message);
+            }
+        }
+
+        // Predicted Solar Output — live from the OpenShift AI solar-output model
+        // driven by Open-Meteo weather. Backend caches ~30 min; UI polls with the
+        // rest of the dashboard and shows predicted vs. simulated actual output.
+        const SOLAR_STATUS_LABEL = { ok: 'On target', underperforming: 'Below plan', offline: 'Idle' };
+        let solarBySite = {};   // site_code -> latest /api/solar/predict result
+
+        function solarSparkline(points) {
+            // Tiny inline SVG of the 24h predicted-kW forecast.
+            if (!points || points.length < 2) return '';
+            const vals = points.map(p => p.predicted_kw);
+            const max = Math.max(1, ...vals);
+            const w = 100, h = 34;
+            const coords = vals.map((v, i) => {
+                const x = (i / (vals.length - 1)) * w;
+                const y = h - (v / max) * (h - 3) - 1.5;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            });
+            return `<svg class="solar-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" width="100%">
+                <polyline fill="none" stroke="#fbbf24" stroke-width="1.5" points="${coords.join(' ')}" />
+            </svg>`;
+        }
+
+        async function loadSolar() {
+            const host = document.getElementById('solarCards');
+            if (!host) return;
+            let sites;
+            try {
+                sites = await apiGet('/solar/predict');
+            } catch (e) {
+                console.warn('loadSolar failed:', e.message);
+                host.innerHTML = '<div class="solar-empty">Solar forecast unavailable.</div>';
+                return;
+            }
+            if (!sites.length) {
+                host.innerHTML = '<div class="solar-empty">No solar sites configured.</div>';
+                return;
+            }
+            // Cache by site_code so the map tooltip can show live solar output
+            // (solar sites have no turbines, so the turbine rollup is 0).
+            solarBySite = Object.fromEntries(sites.map(s => [s.site_code, s]));
+
+            // Fold live solar generation into fleet Total Output.
+            solarOutputMw = sites.reduce((sum, s) => sum + (s.actual_now_kw || 0), 0) / 1000;
+            renderTotalOutput();
+
+            host.innerHTML = sites.map(s => {
+                const label = SOLAR_STATUS_LABEL[s.status] || s.status;
+                const resid = s.status === 'offline'
+                    ? '' : ` · <b>${s.residual_pct.toFixed(0)}%</b> vs plan`;
+                return `<div class="solar-card ${s.status}" onclick="openSolarForecast('${s.site_code}')" title="Click for 5-day forecast">
+                    <div class="solar-card-top">
+                        <div>
+                            <div class="solar-site">${s.site_name}</div>
+                            <div class="solar-city">${s.nearest_city || ''}</div>
+                        </div>
+                        <div class="solar-badge ${s.status}">${label}</div>
+                    </div>
+                    <div class="solar-figures">
+                        <div class="solar-figure">
+                            <div class="lbl">Predicted</div>
+                            <div class="val cyan">${Math.round(s.predicted_now_kw).toLocaleString()} kW</div>
+                        </div>
+                        <div class="solar-figure">
+                            <div class="lbl">Actual</div>
+                            <div class="val amber">${Math.round(s.actual_now_kw).toLocaleString()} kW</div>
+                        </div>
+                    </div>
+                    <div class="solar-context">
+                        <b>${Math.round(s.irradiance_wm2)}</b> W/m² · <b>${Math.round(s.ambient_temp_c)}</b>°C ·
+                        <b>${Math.round(s.cloud_cover_pct)}%</b> cloud${resid}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Predicted Wave Output — live from the wave-energy model driven by
+        // Open-Meteo Marine sea state (wave height + period). Mirrors the solar
+        // card: predicted vs. simulated actual output, click for a 5-day forecast.
+        const WAVE_STATUS_LABEL = { ok: 'On target', underperforming: 'Below plan', offline: 'Becalmed' };
+        let waveBySite = {};   // site_code -> latest /api/wave/predict result
+
+        // Live wind cut-out status. Wind farms have no per-site card; their state
+        // shows on the map (shutdown marker) and via high-wind alerts in the feed.
+        let windBySite = {};   // site_code -> latest /api/wind/status result
+        async function loadWind() {
+            try {
+                const sites = await apiGet('/wind/status');
+                windBySite = Object.fromEntries(sites.map(s => [s.site_code, s]));
+            } catch (e) {
+                console.warn('loadWind failed:', e.message);
+            }
+        }
+
+        async function loadWave() {
+            const host = document.getElementById('waveCards');
+            if (!host) return;
+            let sites;
+            try {
+                sites = await apiGet('/wave/predict');
+            } catch (e) {
+                console.warn('loadWave failed:', e.message);
+                host.innerHTML = '<div class="solar-empty">Wave forecast unavailable.</div>';
+                return;
+            }
+            if (!sites.length) {
+                host.innerHTML = '<div class="solar-empty">No wave sites configured.</div>';
+                return;
+            }
+            // Cache by site_code so the map tooltip can show live wave output
+            // (wave sites have no turbines, so the turbine rollup is 0).
+            waveBySite = Object.fromEntries(sites.map(s => [s.site_code, s]));
+
+            // Fold live wave generation into fleet Total Output.
+            waveOutputMw = sites.reduce((sum, s) => sum + (s.actual_now_kw || 0), 0) / 1000;
+            renderTotalOutput();
+
+            host.innerHTML = sites.map(s => {
+                const label = WAVE_STATUS_LABEL[s.status] || s.status;
+                const resid = s.status === 'offline'
+                    ? '' : ` · <b>${s.residual_pct.toFixed(0)}%</b> vs plan`;
+                return `<div class="solar-card ${s.status}" onclick="openWaveForecast('${s.site_code}')" title="Click for 5-day forecast">
+                    <div class="solar-card-top">
+                        <div>
+                            <div class="solar-site">${s.site_name}</div>
+                            <div class="solar-city">${s.nearest_city || ''}</div>
+                        </div>
+                        <div class="solar-badge ${s.status}">${label}</div>
+                    </div>
+                    <div class="solar-figures">
+                        <div class="solar-figure">
+                            <div class="lbl">Predicted</div>
+                            <div class="val cyan">${Math.round(s.predicted_now_kw).toLocaleString()} kW</div>
+                        </div>
+                        <div class="solar-figure">
+                            <div class="lbl">Actual</div>
+                            <div class="val amber">${Math.round(s.actual_now_kw).toLocaleString()} kW</div>
+                        </div>
+                    </div>
+                    <div class="solar-context">
+                        <b>${s.wave_height_m.toFixed(1)}</b> m waves · <b>${s.wave_period_s.toFixed(1)}</b> s ·
+                        <b>${Math.round(s.wave_power_kw_per_m)}</b> kW/m${resid}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Solar/wave 5-day forecast modal (click a card).
+        let solarForecastChart = null;
+
+        // kind: 'solar' | 'wave' — same modal, different endpoint, accent + source label.
+        const FORECAST_KINDS = {
+            solar: { color: '#fbbf24', fill: 'rgba(251, 191, 36, 0.12)',
+                     liveSources: ['open-meteo'] },
+            wave:  { color: '#2dd4bf', fill: 'rgba(45, 212, 191, 0.12)',
+                     liveSources: ['open-meteo-marine'] },
+        };
+
+        function openSolarForecast(siteCode) { return openForecastModal('solar', siteCode); }
+        function openWaveForecast(siteCode) { return openForecastModal('wave', siteCode); }
+
+        async function openForecastModal(kind, siteCode) {
+            const cfg = FORECAST_KINDS[kind] || FORECAST_KINDS.solar;
+            const modal = document.getElementById('solarModal');
+            document.getElementById('solarModalTitle').textContent = 'Loading forecast…';
+            document.getElementById('solarModalSub').textContent = '';
+            document.getElementById('solarModalDaily').innerHTML = '';
+            modal.classList.add('open');
+
+            let data;
+            try {
+                data = await apiGet('/' + kind + '/forecast/' + encodeURIComponent(siteCode));
+            } catch (e) {
+                document.getElementById('solarModalTitle').textContent = 'Forecast unavailable';
+                document.getElementById('solarModalSub').textContent = e.message;
+                return;
+            }
+
+            openForecast = { kind, site_code: siteCode, site_name: data.site_name };
+            document.getElementById('solarModalTitle').textContent =
+                data.site_name + ' — 5-day predicted output';
+            const src = cfg.liveSources.includes(data.weather_source)
+                ? 'live forecast' : 'simulated conditions';
+            const cap = data.capacity_kw ? ' · ' + (data.capacity_kw / 1000).toFixed(0) + ' MW rated' : '';
+            document.getElementById('solarModalSub').textContent =
+                (data.nearest_city ? data.nearest_city + ' · ' : '') + src + cap;
+
+            // Hourly predicted-kW line across the whole horizon. Category x-axis
+            // (no time adapter needed): show a weekday tick at each local midnight,
+            // blanks in between; full timestamp lives in the tooltip.
+            const times = data.hourly.map(p => new Date(p.time));
+            const values = data.hourly.map(p => p.predicted_kw);
+            const labels = times.map((t, i) =>
+                (i === 0 || t.getHours() === 0)
+                    ? t.toLocaleDateString(undefined, { weekday: 'short' })
+                    : '');
+            const ctx = document.getElementById('solarForecastChart').getContext('2d');
+            if (solarForecastChart) solarForecastChart.destroy();
+            solarForecastChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        borderColor: cfg.color,
+                        backgroundColor: cfg.fill,
+                        borderWidth: 1.5,
+                        fill: true,
+                        pointRadius: 0,
+                        tension: 0.3,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false },
+                        tooltip: { callbacks: {
+                            title: items => times[items[0].dataIndex].toLocaleString(undefined,
+                                { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
+                            label: item => Math.round(item.parsed.y).toLocaleString() + ' kW',
+                        } } },
+                    scales: {
+                        x: { ticks: { color: '#64748b', autoSkip: false, maxRotation: 0 },
+                             grid: { color: 'rgba(56,189,248,0.06)' } },
+                        y: { beginAtZero: true,
+                             ticks: { color: '#64748b',
+                                      callback: v => (v / 1000).toFixed(0) + ' MW' },
+                             grid: { color: 'rgba(56,189,248,0.06)' } },
+                    },
+                },
+            });
+
+            // Per-day energy summary.
+            document.getElementById('solarModalDaily').innerHTML = data.daily.map(d => {
+                const dt = new Date(d.date + 'T00:00:00');
+                const day = dt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+                return `<div class="solar-day">
+                    <div class="d-date">${day}</div>
+                    <div class="d-energy">${(d.energy_kwh / 1000).toFixed(1)} MWh</div>
+                    <div class="d-peak">peak ${Math.round(d.peak_kw).toLocaleString()} kW</div>
+                </div>`;
+            }).join('');
+        }
+
+        function closeSolarForecast() {
+            document.getElementById('solarModal').classList.remove('open');
+            openForecast = null;
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeSolarForecast(); closeSchedule(); }
+        });
+
+        // ---- Operator schedule modal ----
+
+        const CAL_DAYS = 14;
+        let SHIFTS = {};
+        let SCHED_ROSTER = [];
+
+        // Rota precedence is resolved server-side by operative_availability();
+        // nothing here recomputes who is working.
+        function dayFor(code, iso) {
+            const o = SCHED_ROSTER.find(x => x.employee_code === code);
+            return o && o.days.find(d => d.day === iso);
+        }
+
+        async function openSchedule(siteName) {
+            document.getElementById('scheduleModal').classList.add('open');
+            document.getElementById('schedMsg').textContent = '';
+            try {
+                const [turbines, roster, shifts] = await Promise.all([
+                    apiGet('/turbines'),
+                    apiGet(`/operators/availability?days=${CAL_DAYS}`),
+                    apiGet('/shifts'),
+                ]);
+                SHIFTS = Object.fromEntries(shifts.map(s => [s.shift, s]));
+                SCHED_ROSTER = roster;
+                populateTurbines(turbines, siteName);
+                populateOperators(roster);
+                renderCalendar(roster);
+                syncShiftHint();
+            } catch (e) {
+                document.getElementById('schedCal').innerHTML =
+                    `<div class="cal-empty">Could not load schedule: ${e.message}</div>`;
+            }
+        }
+
+        function closeSchedule() {
+            document.getElementById('scheduleModal').classList.remove('open');
+        }
+
+        function populateTurbines(turbines, siteName) {
+            const sel = document.getElementById('schedTurbine');
+            // Opened from a map marker: narrow to that site, but fall back to the
+            // whole fleet rather than an empty dropdown.
+            const atSite = siteName ? turbines.filter(t => t.site_name === siteName) : [];
+            const list = atSite.length ? atSite : turbines;
+            sel.innerHTML = list.map(t =>
+                `<option value="${t.turbine_code}">${t.turbine_code} — ${t.site_name}</option>`).join('');
+        }
+
+        function populateOperators(roster) {
+            const sel = document.getElementById('schedOperator');
+            // Everyone stays in the calendar, but somebody off all fortnight
+            // has nowhere to put a job.
+            const assignable = roster.filter(o => o.days.some(d => d.working));
+            sel.innerHTML = '<option value="">Unassigned</option>' + assignable.map(o =>
+                `<option value="${o.employee_code}">${o.name} (${o.skill_level})</option>`).join('');
+        }
+
+        function longDate(iso) {
+            const [y, m, d] = iso.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString(
+                undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+        }
+
+        // Warn before the API has to reject, and snap to the shift start.
+        function syncShiftHint() {
+            const hint = document.getElementById('schedShiftHint');
+            if (!hint) return;
+            const code = document.getElementById('schedOperator').value;
+            const startEl = document.getElementById('schedStart');
+            const o = SCHED_ROSTER.find(x => x.employee_code === code);
+            if (!o || !startEl.value) { hint.textContent = ''; hint.className = 'sched-hint'; return; }
+
+            const picked = new Date(startEl.value);
+            const iso = calIsoLocal(picked);
+            const day = o.days.find(x => x.day === iso);
+            const when = longDate(iso);
+            if (!day) { hint.textContent = ''; hint.className = 'sched-hint'; return; }
+
+            if (!day.working) {
+                const next = o.days.find(x => x.day > iso && x.working);
+                hint.textContent = `${o.name} is ${day.on_leave ? 'on leave' : 'off'} on ${when}.`
+                    + (next ? ` Next working day is ${longDate(next.day)}.` : '');
+                hint.className = 'sched-hint warn';
+                return;
+            }
+
+            const hours = parseFloat(document.getElementById('schedHours').value)
+                || day.capacity_hours;
+            const needed = Math.min(hours, day.capacity_hours);
+            if (day.free_hours < needed) {
+                const titles = day.assignments.map(a => a.title).join(', ') || 'other work';
+                hint.textContent = `${o.name} has ${day.free_hours}h free on ${when}`
+                    + ` but this needs ${needed}h (${titles}).`;
+                hint.className = 'sched-hint warn';
+                return;
+            }
+
+            const def = SHIFTS[day.shift];
+            if (def && def.start_hour !== null && picked.getHours() !== def.start_hour) {
+                startEl.value = `${iso}T${String(def.start_hour).padStart(2, '0')}:00`;
+            }
+            hint.textContent = `${o.name} works the ${day.shift.replace('_', '-')} shift on ${when}`
+                + (day.window ? ` (${day.window})` : '')
+                + ` — ${day.free_hours}h of ${day.capacity_hours}h free.`;
+            hint.className = 'sched-hint ok';
+        }
+
+        function calIsoLocal(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function renderCalendar(roster) {
+            const el = document.getElementById('schedCal');
+            if (!roster.length) { el.innerHTML = '<div class="cal-empty">No technicians available.</div>'; return; }
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const todayIso = calIsoLocal(today);
+            const days = [];
+            for (let i = 0; i < CAL_DAYS; i++) {
+                const d = new Date(today); d.setDate(today.getDate() + i); days.push(d);
+            }
+
+            let html = '<div class="cal-corner">Technician</div>';
+            for (const d of days) {
+                const wd = d.toLocaleDateString(undefined, { weekday: 'short' });
+                const dm = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                const t = calIsoLocal(d) === todayIso ? ' today' : '';
+                html += `<div class="cal-dayhead${t}"><span class="cal-wd">${wd}</span><span class="cal-dm">${dm}</span></div>`;
+            }
+
+            for (const o of roster) {
+                html += `<div class="cal-opname"><span class="cal-opn">${o.name}</span><span class="cal-ops">${o.employee_code} · ${o.skill_level}</span></div>`;
+                for (const d of days) {
+                    const iso = calIsoLocal(d);
+                    const day = dayFor(o.employee_code, iso);
+                    const cls = day ? day.shift : 'off';
+                    const label = cls.replace('_', '-');
+                    const def = SHIFTS[cls];
+                    const win = day ? day.window : null;
+                    const tip = cls === 'leave' ? 'On leave'
+                        : (day && day.is_exception) ? 'Scheduled exception'
+                        : (def && def.description) || label;
+                    // Multi-day work is expanded per day by the API. A drifted
+                    // job shows where it will actually run, not where it was booked.
+                    const chips = (day ? day.assignments : []).map(a =>
+                        `<span class="cal-task${a.drifted ? ' drifted' : ''}" title="${a.title} (${a.status}, ${a.hours}h)`
+                        + `${a.drifted ? ` — booked for ${longDate(a.booked_for)}, moved here` : ''}">${a.title}</span>`).join('');
+                    const load = day && day.booked_hours
+                        ? `<span class="cal-load">${day.booked_hours}/${day.capacity_hours}h</span>` : '';
+                    const t = iso === todayIso ? ' today' : '';
+                    html += `<div class="cal-cell${t}"><span class="cal-shift ${cls}" title="${tip}">`
+                          + `${label}${win ? `<em>${win}</em>` : ''}</span>${chips}${load}</div>`;
+                }
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'cal-grid';
+            grid.style.gridTemplateColumns = `170px repeat(${CAL_DAYS}, minmax(96px, 1fr))`;
+            grid.innerHTML = html;
+            el.innerHTML = '';
+            el.appendChild(grid);
+        }
+
+        async function submitTask(event) {
+            event.preventDefault();
+            const btn = document.getElementById('schedSubmit');
+            const msg = document.getElementById('schedMsg');
+            const hours = document.getElementById('schedHours').value;
+            const start = document.getElementById('schedStart').value;
+            const operative = document.getElementById('schedOperator').value;
+            const body = {
+                turbine_code: document.getElementById('schedTurbine').value,
+                work_type: document.getElementById('schedType').value,
+                priority: document.getElementById('schedPriority').value,
+                title: document.getElementById('schedTitle').value.trim(),
+                assigned_operative_code: operative || null,
+                // Sent as local wall-clock, not UTC: a shift that runs 07:00-19:00
+                // means those hours at the site, and converting here would have
+                // the API judge the wrong hour for anyone outside UTC.
+                scheduled_start: start || null,
+                estimated_hours: hours ? parseFloat(hours) : null,
+            };
+            btn.disabled = true;
+            msg.textContent = '';
+            msg.className = 'sched-msg';
+            try {
+                const res = await fetch(API_BASE + '/maintenance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) {
+                    let detail = res.status;
+                    try { detail = (await res.json()).detail || detail; } catch {}
+                    throw new Error(detail);
+                }
+                const wo = await res.json();
+                document.getElementById('schedForm').reset();
+                document.getElementById('schedPriority').value = 'medium';
+                await Promise.all([loadMaintenance(), openSchedule()]);
+                msg.textContent = `Created ${wo.work_order_number} (${wo.status}).`;
+                msg.className = 'sched-msg ok';
+            } catch (e) {
+                msg.textContent = `Could not create task: ${e.message}`;
+                msg.className = 'sched-msg err';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ---- Europe map (D3 + vendored public-domain Natural Earth geometry) ----
+
+        let europeTopo = null;   // cached TopoJSON
+        let mapResizeTimer = null;
+        let mapZoom = null;                        // d3.zoom behavior
+        let mapZoomTransform = null;               // persists zoom across redraws
+        let mapDragged = false;                    // true once a pan actually moved
+        let mapSiteLayer = null;                   // <g> holding the site markers
+        let mapProjection = null;                  // set once the map is built
+        let mapBuilding = false;                   // guards against overlapping builds
+
+        // Markers encode ENERGY TYPE (not health): distinct shape + colour so
+        // wind / solar / wave read clearly, incl. for colour-blind viewers.
+        // Type comes from the API (s.energy_type) and defaults to 'wind'
+        // because every current DB site is a wind farm.
+        const ENERGY_TYPES = {
+            wind:  { label: 'Wind',  color: '#38bdf8', shape: 'circle' },
+            solar: { label: 'Solar', color: '#fbbf24', shape: 'square' },
+            wave:  { label: 'Wave',  color: '#2dd4bf', shape: 'triangle' },
+        };
+
+        function siteType(s) {
+            const t = (s.energy_type || 'wind').toLowerCase();
+            return ENERGY_TYPES[t] || ENERGY_TYPES.wind;
+        }
+
+        // Append the type-specific core glyph (radius r) to a marker group.
+        function appendGlyph(sel, shape, r, color) {
+            if (shape === 'square') {
+                sel.append('rect').attr('class', 'core')
+                    .attr('x', -r).attr('y', -r).attr('width', 2 * r).attr('height', 2 * r)
+                    .attr('rx', r * 0.25).attr('fill', color);
+            } else if (shape === 'triangle') {
+                const h = r * 1.5;
+                sel.append('path').attr('class', 'core')
+                    .attr('d', `M0,${-h} L${h},${h} L${-h},${h} Z`).attr('fill', color);
+            } else {
+                sel.append('circle').attr('class', 'core').attr('r', r).attr('fill', color);
+            }
+        }
+
+        function showMapTip(ev, s) {
+            const tip = document.getElementById('mapTooltip');
+            const host = document.querySelector('.map-section').getBoundingClientRect();
+            const type = siteType(s);
+            let rows;
+            if (type.label === 'Solar' || type.label === 'Wave') {
+                // Solar/wave sites have no turbines; show rated capacity + live
+                // output from /api/{solar,wave}/predict (cached per type).
+                const sp = (type.label === 'Wave' ? waveBySite : solarBySite)[s.site_code];
+                const capMw = s.capacity_kw ? (s.capacity_kw / 1000).toFixed(0) + ' MW' : '—';
+                rows = `<div class="tt-row"><span style="color:${type.color};">${type.label}</span> · <b>${capMw}</b> capacity</div>`;
+                if (sp) {
+                    rows += `<div class="tt-row">now <b>${(sp.actual_now_kw / 1000).toFixed(1)}</b> / ` +
+                            `<b>${(sp.predicted_now_kw / 1000).toFixed(1)}</b> MW predicted` +
+                            (sp.status === 'underperforming' ? ' · <b style="color:#fbbf24;">below plan</b>' : '') + `</div>`;
+                }
+            } else {
+                rows = `<div class="tt-row"><span style="color:${type.color};">${type.label}</span> · <b>${s.turbine_count}</b> units · <b>${s.live_output_mw}</b> MW</div>` +
+                       `<div class="tt-row"><b>${s.operational}</b> operational · <b>${s.maintenance}</b> maint · <b>${s.offline}</b> offline</div>`;
+                const w = windBySite[s.site_code];
+                if (w && w.shutdown) {
+                    rows += `<div class="tt-row"><b style="color:#f87171;">SHUTDOWN</b> · high wind <b>${w.wind_speed_ms}</b> m/s (cut-out ${w.cutout_ms})</div>`;
+                } else if (w) {
+                    rows += `<div class="tt-row">wind <b>${w.wind_speed_ms}</b> m/s</div>`;
+                }
+            }
+            tip.innerHTML =
+                `<div class="tt-title">${s.site_name}${s.nearest_city ? ' · ' + s.nearest_city : ''}</div>` + rows;
+            tip.style.left = (ev.clientX - host.left + 14) + 'px';
+            tip.style.top = (ev.clientY - host.top + 14) + 'px';
+            tip.style.opacity = 1;
+        }
+
+        function hideMapTip() {
+            document.getElementById('mapTooltip').style.opacity = 0;
+        }
+
+        // ---- Site detail panel (click a marker) ---------------------------
+
+        let sitePanelSite = null;
+        let sitePanelTurbines = null;
+        let sitePanelChart = null;
+
+        function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"]/g,
+                c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        }
+
+        function closeSitePanel() {
+            document.getElementById('sitePanel').classList.remove('open');
+            sitePanelSite = null;
+            sitePanelTurbines = null;
+            if (sitePanelChart) { sitePanelChart.destroy(); sitePanelChart = null; }
+        }
+
+        function spWhen(iso) {
+            if (!iso) return 'unscheduled';
+            const d = new Date(iso);
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+                   ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function openSitePanel(s) {
+            sitePanelSite = s;
+            sitePanelTurbines = null;
+            hideMapTip();
+            if (sitePanelChart) { sitePanelChart.destroy(); sitePanelChart = null; }
+            const type = siteType(s);
+            document.getElementById('spTitle').textContent = s.site_name;
+            document.getElementById('spSub').textContent =
+                [type.label, s.nearest_city, s.country].filter(Boolean).join(' · ');
+            document.getElementById('sitePanel').classList.add('open');
+            renderSitePanel(s, null);
+
+            // Turbine list is the one piece not already cached in the page.
+            if (s.turbine_count > 0) {
+                let turbines = [];
+                try {
+                    turbines = await apiGet('/turbines?site_code=' + encodeURIComponent(s.site_code));
+                } catch (e) {
+                    console.warn('site turbines failed:', e.message);
+                }
+                if (sitePanelSite === s) renderSitePanel(s, turbines);
+            }
+        }
+
+        function renderSitePanel(s, turbines) {
+            sitePanelTurbines = turbines;
+            const type = siteType(s);
+            const wind = windBySite[s.site_code];
+            const pred = (type.label === 'Wave' ? waveBySite : solarBySite)[s.site_code];
+            const isTurbineSite = s.turbine_count > 0;
+            let html = '';
+
+            if (wind && wind.shutdown) {
+                html += `<div class="sp-banner">SHUTDOWN — high wind ${wind.wind_speed_ms} m/s ` +
+                        `(cut-out ${wind.cutout_ms})</div>`;
+            }
+
+            // Live output against rated capacity. Wind sites carry no capacity_kw,
+            // so their rating is summed from the turbines once those arrive.
+            const liveMw = isTurbineSite
+                ? (s.live_output_mw || 0)
+                : (pred ? pred.actual_now_kw / 1000 : 0);
+            let ratedKw = s.capacity_kw || 0;
+            if (!ratedKw && turbines && turbines.length) {
+                ratedKw = turbines.reduce((a, t) => a + (t.rated_power_kw || 0), 0);
+            }
+            const ratedMw = ratedKw / 1000;
+            const pct = ratedMw > 0 ? Math.min(100, (liveMw / ratedMw) * 100) : 0;
+
+            html += '<div class="sp-section">';
+            html += `<div class="sp-output"><b>${liveMw.toFixed(1)}</b><span>MW live` +
+                    `${ratedMw ? ' of ' + ratedMw.toFixed(0) + ' MW rated' : ''}</span></div>`;
+            html += `<div class="sp-bar"><i style="width:${pct.toFixed(1)}%;background:${type.color};"></i></div>`;
+            if (pred) {
+                const delta = pred.status === 'underperforming'
+                    ? ' <b style="color:#fbbf24;">below plan</b>' : '';
+                html += `<div class="sp-row-meta">${(pred.predicted_now_kw / 1000).toFixed(1)} MW predicted${delta}</div>`;
+            } else if (wind && !wind.shutdown) {
+                html += `<div class="sp-row-meta">wind ${wind.wind_speed_ms} m/s · ` +
+                        `${esc(s.terrain)}</div>`;
+            }
+            if (isTurbineSite) {
+                html += `<div class="sp-counts">
+                    <div class="sp-count ok"><b>${s.operational}</b><span>Operational</span></div>
+                    <div class="sp-count maint"><b>${s.maintenance}</b><span>Maintenance</span></div>
+                    <div class="sp-count off"><b>${s.offline}</b><span>Offline</span></div>
+                </div>`;
+            }
+            html += '</div>';
+
+            if (isTurbineSite) {
+                html += '<div class="sp-section"><div class="sp-section-title">Turbines</div>';
+                if (!turbines) {
+                    html += '<div class="sp-empty">Loading…</div>';
+                } else if (!turbines.length) {
+                    html += '<div class="sp-empty">No turbines returned for this site.</div>';
+                } else {
+                    html += '<div class="sp-chips">' + turbines.map(t =>
+                        `<button class="sp-chip ${esc(t.status)}" onclick="showTurbineTrend('${esc(t.turbine_code)}', this)" ` +
+                        `title="${esc(t.model)} · ${t.current_power_output_kw} kW · ${esc(t.status)}">` +
+                        `${esc(t.turbine_code)}</button>`).join('') + '</div>';
+                    html += `<div class="sp-chart-wrap" id="spChartWrap" style="display:none;">
+                        <div class="sp-chart-head"><span id="spChartTitle"></span><span id="spChartMeta"></span></div>
+                        <div class="sp-chart-box"><canvas id="spTurbineChart"></canvas></div>
+                    </div>`;
+                }
+                html += '</div>';
+            }
+
+            const alerts = (activeAlerts || []).filter(a => a.site_name === s.site_name);
+            html += `<div class="sp-section"><div class="sp-section-title">Open alerts (${alerts.length})</div>`;
+            html += alerts.length ? alerts.map(a => {
+                const sev = (a.severity === 'critical' || a.severity === 'emergency') ? 'critical' : 'warning';
+                return `<div class="sp-row ${sev}">
+                    <div class="sp-row-title">${esc(a.title)}</div>
+                    <div class="sp-row-meta">${esc(a.severity)}${a.turbine_code ? ' · ' + esc(a.turbine_code) : ''} · ${relativeTime(a.alert_time)}</div>
+                    ${a.recommended_action ? `<div class="sp-row-action">${esc(a.recommended_action)}</div>` : ''}
+                </div>`;
+            }).join('') : '<div class="sp-empty">No active alerts here.</div>';
+            html += '</div>';
+
+            const wos = (maintenanceTasks || []).filter(t => t.site_name === s.site_name);
+            html += `<div class="sp-section"><div class="sp-section-title">Scheduled work (${wos.length})</div>`;
+            html += wos.length ? wos.map(t => `
+                <div class="sp-row">
+                    <div class="sp-row-title">${esc(t.title)}</div>
+                    <div class="sp-row-meta">${esc(t.priority)} · ${esc(t.status)}${t.turbine_code ? ' · ' + esc(t.turbine_code) : ''} · ${spWhen(t.scheduled_start)}${t.assigned_operative ? ' · ' + esc(t.assigned_operative) : ''}</div>
+                </div>`).join('') : '<div class="sp-empty">No open work orders here.</div>';
+            html += '</div>';
+
+            html += '<div class="sp-section"><div class="sp-section-title">Actions</div><div class="sp-actions">';
+            if (type.label === 'Solar' || type.label === 'Wave') {
+                html += '<button class="sp-btn" onclick="spForecast()">5-day forecast</button>';
+            }
+            if (isTurbineSite) {
+                html += '<button class="sp-btn" onclick="spNewTask()">New task here</button>';
+            }
+            html += '<button class="sp-btn" onclick="spAskPangea()">Ask Pangea</button>';
+            html += '</div></div>';
+
+            document.getElementById('spBody').innerHTML = html;
+        }
+
+        async function showTurbineTrend(code, chip) {
+            const wrap = document.getElementById('spChartWrap');
+            if (!wrap) return;
+            document.querySelectorAll('#spBody .sp-chip').forEach(c => c.classList.remove('sel'));
+            if (chip) chip.classList.add('sel');
+            wrap.style.display = 'block';
+            document.getElementById('spChartTitle').textContent = code + ' · 48h vibration';
+            document.getElementById('spChartMeta').textContent = 'loading…';
+
+            let rows = [];
+            try {
+                rows = await apiGet('/turbines/' + encodeURIComponent(code) + '/readings?hours=48');
+            } catch (e) {
+                document.getElementById('spChartMeta').textContent = 'unavailable';
+                return;
+            }
+            if (!rows.length) {
+                document.getElementById('spChartMeta').textContent = 'no readings';
+                if (sitePanelChart) { sitePanelChart.destroy(); sitePanelChart = null; }
+                return;
+            }
+
+            const step = Math.max(1, Math.floor(rows.length / 60));
+            const sampled = rows.filter((_, i) => i % step === 0);
+            const peak = rows.reduce((m, r) => Math.max(m, r.anomaly_score || 0), 0);
+            document.getElementById('spChartMeta').textContent = 'peak anomaly ' + peak.toFixed(2);
+
+            const canvas = document.getElementById('spTurbineChart');
+            if (!canvas) return;
+            if (sitePanelChart) sitePanelChart.destroy();
+            sitePanelChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: sampled.map(r => new Date(r.reading_time)
+                        .toLocaleTimeString(undefined, { hour: '2-digit' })),
+                    datasets: [{
+                        data: sampled.map(r => r.vibration_x_mms),
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        borderWidth: 1.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 0,
+                        pointHoverRadius: 3,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 }, maxTicksLimit: 6 } },
+                        y: { grid: { color: 'rgba(56, 189, 248, 0.1)' }, ticks: { color: '#64748b', font: { size: 8 } } },
+                    },
+                },
+            });
+        }
+
+        function spForecast() {
+            if (!sitePanelSite) return;
+            openForecastModal(siteType(sitePanelSite).label.toLowerCase(), sitePanelSite.site_code);
+        }
+
+        function spNewTask() {
+            if (!sitePanelSite) return;
+            openSchedule(sitePanelSite.site_name);
+        }
+
+        function spAskPangea() {
+            if (!sitePanelSite) return;
+            sendChat('Give me a status summary for ' + sitePanelSite.site_name + '.');
+            const panel = document.querySelector('.ai-chat-section');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        document.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Escape' && sitePanelSite) closeSitePanel();
+        });
+
+        async function renderEuropeMap() {
+            const svgEl = document.getElementById('europeMap');
+            if (!svgEl || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+            const rect = svgEl.getBoundingClientRect();
+            if (rect.width < 10 || rect.height < 10) return;   // not visible yet
+            if (mapBuilding) return;                           // a build is already in flight
+            mapBuilding = true;
+            try {
+                await buildEuropeMap(svgEl, rect);
+            } finally {
+                mapBuilding = false;
+            }
+        }
+
+        async function buildEuropeMap(svgEl, rect) {
+            try {
+                if (!europeTopo) {
+                    const res = await fetch('/countries-50m.json');
+                    if (!res.ok) throw new Error('topojson ' + res.status);
+                    europeTopo = await res.json();
+                }
+            } catch (e) {
+                console.warn('map geometry unavailable:', e.message);
+                return;
+            }
+
+            const w = rect.width, h = rect.height;
+            const svg = d3.select(svgEl);
+            svg.selectAll('*').remove();
+            svg.attr('viewBox', `0 0 ${w} ${h}`);
+
+            const land = topojson.feature(europeTopo, europeTopo.objects.countries);
+            // Two opposite corners (SW, NE) — a MultiPoint avoids d3's spherical
+            // polygon-winding bug, where a CCW ring is read as "the whole globe
+            // minus this box" and fitExtent zooms out to the entire world.
+            const europeBox = { type: 'MultiPoint', coordinates: [[-13, 34], [22, 71]] };
+            const projection = d3.geoMercator().fitExtent([[14, 14], [w - 14, h - 14]], europeBox);
+            const path = d3.geoPath(projection);
+
+            // Everything zoomable lives in one layer we pan/scale as a group.
+            const zoomLayer = svg.append('g').attr('class', 'zoom-layer');
+
+            zoomLayer.append('g').selectAll('path')
+                .data(land.features).join('path')
+                .attr('class', 'country').attr('d', path);
+
+            mapSiteLayer = zoomLayer.append('g');
+
+            // Wheel-zoom / drag-pan over the map, applied to the zoom layer.
+            // Country borders and markers are counter-scaled so they stay crisp.
+            // Half a frame of slack on each side keeps dragging usable at k=1 while
+            // stopping the map being thrown clean out of view.
+            mapZoom = d3.zoom()
+                .scaleExtent([1, 12])
+                .translateExtent([[-w * 0.5, -h * 0.5], [w * 1.5, h * 1.5]])
+                .filter((ev) => !ev.button)          // allow wheel (no modifier needed)
+                .on('start', (ev) => {
+                    mapDragged = false;
+                    if (ev.sourceEvent && ev.sourceEvent.type === 'mousedown') {
+                        svg.style('cursor', 'grabbing');
+                        hideMapTip();
+                    }
+                })
+                .on('end', () => svg.style('cursor', 'grab'))
+                .on('zoom', (ev) => {
+                    // A pan that moved counts as a drag, so the mouseup at the end
+                    // of it doesn't read as a click on whatever is under the cursor.
+                    if (ev.sourceEvent && ev.sourceEvent.type === 'mousemove') mapDragged = true;
+                    const t = ev.transform;
+                    mapZoomTransform = t;
+                    zoomLayer.attr('transform', t);
+                    zoomLayer.selectAll('.country').attr('stroke-width', 0.6 / t.k);
+                    zoomLayer.selectAll('.site-dot').attr('transform', function () {
+                        const base = d3.select(this).attr('data-xy');
+                        return `translate(${base}) scale(${1 / t.k})`;
+                    });
+                });
+
+            svg.call(mapZoom);
+            svg.style('cursor', 'grab');
+            svg.on('click', () => { if (!mapDragged) closeSitePanel(); });
+
+            // Reapply any prior zoom so a resize rebuild doesn't reset the view.
+            if (mapZoomTransform) {
+                svg.call(mapZoom.transform, mapZoomTransform);
+            }
+
+            mapProjection = projection;
+            await refreshMapMarkers();
+        }
+
+        // Markers are a keyed data-join so the 30s refresh updates them in place
+        // instead of tearing the map down — that is what used to reset pan/zoom.
+        function drawMapSites(sites) {
+            (sites || []).forEach(s => { siteByCode[s.site_code] = s; });
+            if (!mapSiteLayer || !mapProjection) return;
+            const k = mapZoomTransform ? mapZoomTransform.k : 1;
+            const pts = sites.filter(s => s.latitude != null && s.longitude != null);
+
+            const join = mapSiteLayer.selectAll('.site-dot').data(pts, d => d.site_code);
+            join.exit().remove();
+            const entered = join.enter().append('g').attr('class', 'site-dot');
+            // The halo carries the CSS pulse; it is created once and only ever
+            // retuned, so the animation never restarts on refresh.
+            entered.append('circle').attr('class', 'halo').attr('fill', 'none');
+
+            entered.merge(join).each(function (s) {
+                const dot = d3.select(this);
+                const p = mapProjection([s.longitude, s.latitude]);
+                if (!p) return;
+                const type = siteType(s);
+                // A wind farm past its cut-out is stopped for storm protection —
+                // mark it red with a dashed ring so it reads as shut down.
+                const w = windBySite[s.site_code];
+                const isShutdown = !!(w && w.shutdown);
+                const color = isShutdown ? '#f87171' : type.color;
+                const r = 4 + Math.sqrt(s.turbine_count || 1) * 1.1;
+
+                dot.attr('data-xy', p[0] + ',' + p[1])
+                   .attr('transform', `translate(${p[0]},${p[1]}) scale(${1 / k})`);
+                dot.select('.halo').attr('r', r).attr('fill', color)
+                   .style('--r', r + 'px')
+                   .style('animation', 'sitePulse 2.4s ease-out infinite');
+
+                dot.selectAll('.core, .shutdown-ring, .health-warn').remove();
+                appendGlyph(dot, type.shape, r, color);
+                if (isShutdown) {
+                    dot.append('circle').attr('class', 'shutdown-ring')
+                        .attr('r', r + 4).attr('fill', 'none')
+                        .attr('stroke', '#f87171').attr('stroke-width', 1.5)
+                        .attr('stroke-dasharray', '2 2');
+                }
+
+                // A predicted failure is a different thing from a storm stop:
+                // the turbine is still running, so it gets a (!) badge rather
+                // than being recoloured as offline.
+                const degrading = healthBySite[s.site_code] || [];
+                if (degrading.length) {
+                    const g = dot.append('g').attr('class', 'health-warn')
+                        .attr('transform', `translate(${r + 3},${-r - 3})`)
+                        .style('cursor', 'pointer');
+                    g.append('circle').attr('r', 6.5).attr('fill', '#f59e0b')
+                        .attr('stroke', '#0a1929').attr('stroke-width', 1.5);
+                    g.append('text').attr('text-anchor', 'middle').attr('y', 3.4)
+                        .attr('font-size', '9px').attr('font-weight', '700')
+                        .attr('fill', '#0a1929').text('!');
+                    g.append('title').text(degrading.map(h =>
+                        `${h.turbine_code}: ${h.component} ${h.residual_c > 0 ? '+' : ''}`
+                        + `${h.residual_c}\u00B0C vs expected (${h.z} sigma, `
+                        + `${h.hours_elevated}h)`).join('\n'));
+                }
+
+                // Rebind so handlers close over the freshly fetched site object.
+                dot.on('mousemove', (ev) => showMapTip(ev, s))
+                   .on('mouseleave', hideMapTip)
+                   .on('click', (ev) => {
+                       ev.stopPropagation();
+                       if (!mapDragged) openSitePanel(s);
+                   });
+            });
+
+            document.getElementById('mapSub').textContent =
+                (pts.length || 5) + ' sites • live';
+        }
+
+        async function refreshMapMarkers() {
+            if (!mapProjection) return renderEuropeMap();
+            let sites = [];
+            try {
+                sites = await apiGet('/sites');
+            } catch (e) {
+                console.warn('loadSites failed:', e.message);
+                return;
+            }
+            drawMapSites(sites);
+        }
+
+        // Reflect real assistant availability in the header dot: green only when
+        // the LLM endpoint actually answers, red when it doesn't.
+        function setAiStatus(state) {
+            const dot = document.getElementById('aiStatusDot');
+            const txt = document.getElementById('aiStatusText');
+            if (!dot || !txt) return;
+            dot.classList.remove('offline', 'pending');
+            if (state === 'online') { txt.textContent = 'Online'; }
+            else if (state === 'offline') { dot.classList.add('offline'); txt.textContent = 'Offline'; }
+            else { dot.classList.add('pending'); txt.textContent = 'Connecting…'; }
+        }
+
+        async function checkAgentHealth() {
+            try {
+                const h = await apiGet('/agent/health');
+                setAiStatus(h.online ? 'online' : 'offline');
+            } catch (e) {
+                setAiStatus('offline');
+            }
+        }
+
+        // Turbine health from the normal-behaviour models, keyed by site code so
+        // the map can mark a site whose turbine is degrading.
+        let healthBySite = {};
+        // Persisted: the replayed data is static, so a degrading turbine stays
+        // degrading. Without this it would announce the same turbine on every
+        // page load. Only something newly degrading is worth interrupting for.
+        const HEALTH_SPOKEN_KEY = 'pangea.healthSpoken';
+        let healthSpoken = new Set(
+            JSON.parse(localStorage.getItem(HEALTH_SPOKEN_KEY) || '[]'));
+
+        async function loadHealth() {
+            try {
+                const rows = await apiGet('/turbines/health');
+                const bad = rows.filter(h => h.degrading);
+                healthBySite = {};
+                for (const h of bad) {
+                    const site = h.turbine_code.split('-')[0];
+                    (healthBySite[site] = healthBySite[site] || []).push(h);
+                }
+                // Announce a newly degrading turbine once, unprompted. Waiting
+                // for someone to ask defeats the point of predicting it.
+                // Forget turbines that have recovered, so they announce again
+                // if they degrade a second time.
+                const current = new Set(bad.map(h => h.turbine_code));
+                healthSpoken = new Set([...healthSpoken].filter(c => current.has(c)));
+
+                const fresh = bad.filter(h => !healthSpoken.has(h.turbine_code));
+                if (fresh.length) {
+                    fresh.forEach(h => healthSpoken.add(h.turbine_code));
+                    localStorage.setItem(HEALTH_SPOKEN_KEY,
+                                         JSON.stringify([...healthSpoken]));
+                    announceHealth();
+                }
+            } catch (e) { healthBySite = {}; }
+        }
+
+        async function announceHealth() {
+            try {
+                const b = await apiGet('/turbines/health/briefing');
+                if (!b.spoken) return;
+                appendChat('assistant', b.spoken);
+                if (typeof ttsEnabled !== 'undefined' && ttsEnabled) speakOnce(b.spoken);
+            } catch (e) { /* briefing unavailable - the map marker still shows */ }
+        }
+
+        async function refreshLiveData() {
+            loadFleet();
+            loadAlerts();
+            loadMaintenance();
+            loadSolar();
+            loadWave();
+            checkAgentHealth();
+            await loadHealth();    // populate healthBySite before the map paints
+            await loadWind();      // populate windBySite before the map paints shutdowns
+            refreshMapMarkers();   // update markers in place; never rebuilds the map
+        }
+
+        // Populate on load and refresh periodically.
+        window.addEventListener('load', () => {
+            refreshLiveData();
+            setInterval(refreshLiveData, 30000);
+        });
+
+        window.addEventListener('resize', () => {
+            clearTimeout(mapResizeTimer);
+            mapResizeTimer = setTimeout(renderEuropeMap, 200);
+        });
+    </script>
+</body>
+</html>

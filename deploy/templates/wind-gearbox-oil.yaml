@@ -1,0 +1,143 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: pangea-wind-gearbox-oil
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    opendatahub.io/connection-type-protocol: uri
+    opendatahub.io/connection-type-ref: uri-v1
+    openshift.io/display-name: pangea-wind-gearbox-oil
+stringData:
+  URI: oci://quay.io/sara_banderby/pangea-power:gearbox
+type: Opaque
+---
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/runtime-version: 1.7.1
+    opendatahub.io/serving-runtime-scope: global
+    opendatahub.io/template-display-name: MLServer ServingRuntime for KServe
+    opendatahub.io/template-name: mlserver-runtime-template
+    openshift.io/display-name: MLServer ServingRuntime for KServe
+    serving.kserve.io/server-type: mlserver
+  name: wind-gearbox-oil
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  annotations:
+    monitoring.opendatahub.io/scrape: 'true'
+    opendatahub.io/kserve-runtime: mlserver
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8082'
+  containers:
+    - env:
+        - name: MLSERVER_MODEL_IMPLEMENTATION
+          value: '{{ `{{.Labels.modelClass}}` }}'
+        - name: MLSERVER_HTTP_PORT
+          value: '8080'
+        - name: MLSERVER_MODELS_DIR
+          value: /mnt/models
+      image: 'registry.redhat.io/rhoai/odh-mlserver-rhel9@sha256:d76bea18afe7b361847babb7a8ebc51fdbcd8164435f1bcb971e1701ba1bc595'
+      livenessProbe:
+        failureThreshold: 6
+        httpGet:
+          path: '/v2/models/{{ `{{.Name}}` }}/ready'
+          port: 8080
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 5
+      name: kserve-container
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: '/v2/models/{{ `{{.Name}}` }}/ready'
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 5
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        privileged: false
+        runAsNonRoot: true
+      startupProbe:
+        exec:
+          command:
+            - /bin/sh
+            - '-c'
+            - |
+              [ -n "$(ls -A /mnt/models 2>/dev/null)" ]
+        failureThreshold: 1
+        initialDelaySeconds: 1
+        periodSeconds: 1
+  multiModel: false
+  protocolVersions:
+    - v2
+  supportedModelFormats:
+    - name: sklearn
+      version: '0'
+    - name: sklearn
+      version: '1'
+    - name: xgboost
+      version: '1'
+    - name: xgboost
+      version: '2'
+    - name: lightgbm
+      version: '3'
+    - name: lightgbm
+      version: '4'
+    - name: onnx
+      version: '1'
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    modelFormat: onnx
+    security.opendatahub.io/enable-auth: 'false'
+    openshift.io/description: 'Gearbox oil temperature, normal-behaviour model'
+    openshift.io/display-name: wind-gearbox-oil
+    serving.kserve.io/deploymentMode: Standard
+    opendatahub.io/connections: pangea-wind-gearbox-oil
+    opendatahub.io/model-type: predictive
+  name: wind-gearbox-oil
+  finalizers:
+    - inferenceservice.finalizers
+    - odh.inferenceservice.finalizers
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: RollingUpdate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: onnx
+        version: '1'
+      name: ''
+      resources:
+        limits:
+          cpu: '3'
+          memory: 4Gi
+        requests:
+          cpu: '2'
+          memory: 4Gi
+      runtime: wind-gearbox-oil
+      storageUri: 'oci://quay.io/sara_banderby/pangea-power:gearbox'
+    timeout: 300
+    volumes:
+      - name: kserve-provision-location
+        image:
+          reference: quay.io/sara_banderby/pangea-power:gearbox
+          pullPolicy: Always

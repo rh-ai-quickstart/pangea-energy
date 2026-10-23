@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pangea-ui
+  labels:
+    app.kubernetes.io/name: pangea-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pangea-ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pangea-ui
+    spec:
+      containers:
+        - name: ui
+          image: "image-registry.openshift-image-registry.svc:5000/{{ .Release.Namespace }}/pangea-ui:latest"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pangea-ui
+  labels:
+    app.kubernetes.io/name: pangea-ui
+spec:
+  selector:
+    app.kubernetes.io/name: pangea-ui
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: pangea-ui
+  labels:
+    app.kubernetes.io/name: pangea-ui
+spec:
+  to:
+    kind: Service
+    name: pangea-ui
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

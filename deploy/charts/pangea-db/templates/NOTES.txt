@@ -1,0 +1,23 @@
+pangea-db deployed (image: {{ .Values.image.repository }}:{{ .Values.image.tag }}).
+
+No build step — the pod pulls the prebuilt pgvector image and applies the schema
+and demo fleet from a ConfigMap on first start.
+
+1. Wait for it to come up:
+
+     oc rollout status statefulset/pangea-db
+
+   First start runs the schema + seed, so give it a moment.
+   Follow along with:  oc logs -f statefulset/pangea-db
+
+2. Check it (expect 104 turbines):
+
+     oc exec statefulset/pangea-db -- \
+       psql -U {{ .Values.credentials.user }} -d {{ .Values.credentials.database }} \
+       -c "SELECT count(*) FROM turbines;"
+
+In-cluster endpoint: pangea-db:5432
+{{ if .Values.credentials.password }}Password: the one you passed with --set.{{ else }}Password: generated at install. Read it back with
+
+     oc get secret pangea-db-credentials -o jsonpath='{.data.database-password}' | base64 -d
+{{ end }}

@@ -1,0 +1,53 @@
+{{- if .Values.rebase.enabled }}
+# Keeps the demo timeline from drifting into the past. Open work orders dated
+# before today move on by whole weeks and the rota is re-flowed, so the
+# schedule calendar is still populated however long the deployment has been up.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pangea-db-rebase
+  labels:
+    app.kubernetes.io/name: pangea-db
+    app.kubernetes.io/part-of: pangea-power
+spec:
+  schedule: {{ .Values.rebase.schedule | quote }}
+  timeZone: {{ .Values.rebase.timeZone | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: pangea-db
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: rebase
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  psql -v ON_ERROR_STOP=1 -X -A -F' | ' \
+                    -c 'SELECT * FROM rebase_demo_dates();'
+              env:
+                - name: PGHOST
+                  value: pangea-db
+                - name: PGDATABASE
+                  valueFrom:
+                    secretKeyRef: { name: pangea-db-credentials, key: database-name }
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef: { name: pangea-db-credentials, key: database-user }
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: pangea-db-credentials, key: database-password }
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits:   { cpu: 200m, memory: 128Mi }
+{{- end }}

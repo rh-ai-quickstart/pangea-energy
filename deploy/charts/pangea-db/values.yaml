@@ -1,0 +1,27 @@
+# pangea-db — the only knobs worth changing. Everything else is fixed in the
+# templates (name is always "pangea-db"). Edit and re-run `helm upgrade`.
+
+image:
+  # Community pgvector image (Postgres 15 + pgvector, PostgreSQL-licensed).
+  repository: docker.io/pgvector/pgvector
+  tag: pg15
+  pullPolicy: IfNotPresent
+
+# Data volume size. Leave storageClass empty to use the cluster default.
+storageSize: 10Gi
+storageClass: ""
+
+# Credentials. In this image the created user is the database superuser and owns
+# the schema. These are demo defaults — change them before any real deployment.
+credentials:
+  database: pangea
+  user: pangea_app
+  password: ""
+
+# Nightly job that pulls the demo timeline forward: open work orders dated in
+# the past move on by whole weeks (same weekday, so the rota still fits) and
+# assignments are re-flowed onto real shifts. Turn off for a real deployment.
+rebase:
+  enabled: true
+  schedule: "15 2 * * *"
+  timeZone: "Europe/Stockholm"

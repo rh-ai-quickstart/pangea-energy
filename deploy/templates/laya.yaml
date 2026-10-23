@@ -1,0 +1,47 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: laya-typed-decisions
+spec:
+  supportedModelFormats:
+    - name: laya
+      version: "1"
+      autoSelect: true
+  multiModel: false
+  containers:
+    - name: kserve-container
+      image: quay.io/rlundber/laya-runtime:0.1
+      args:
+        - --model_name={{ `{{.Name}}` }}
+        - --http_port=8080
+      env:
+        - name: HOME
+          value: /tmp
+        - name: HF_HOME
+          value: /tmp/huggingface
+      resources:
+        requests:
+          cpu: "2"
+          memory: 6Gi
+        limits:
+          cpu: "4"
+          memory: 10Gi
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: laya-predictor
+  annotations:
+    serving.kserve.io/deploymentMode: Standard
+    serving.knative.openshift.io/enablePassthrough: "true"
+    sidecar.istio.io/inject: "true"
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: laya
+      runtime: laya-typed-decisions

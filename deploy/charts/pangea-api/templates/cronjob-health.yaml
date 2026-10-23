@@ -1,0 +1,38 @@
+{{- if .Values.healthScoring.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pangea-health-scoring
+  labels:
+    app.kubernetes.io/name: pangea-api
+    app.kubernetes.io/part-of: pangea-power
+spec:
+  schedule: {{ .Values.healthScoring.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: pangea-api
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: score
+              image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+              command: ["bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  echo "scoring turbine health..."
+                  curl -sS -X POST --max-time 120 \
+                    "http://pangea-api:8080/api/turbines/health/persist"
+                  echo
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits:   { cpu: 200m, memory: 128Mi }
+{{- end }}

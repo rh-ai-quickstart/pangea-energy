@@ -1,0 +1,17 @@
+pangea-api deployed.
+
+1. Wait for it to come up:
+
+     oc rollout status deployment/pangea-api
+
+2. Check health (expects the pangea-db Service to be reachable):
+
+     oc exec deployment/pangea-api -- curl -s localhost:8080/api/health
+
+The API has no Route. The browser reaches it through pangea-ui, which proxies
+/api on the same origin. For direct access while debugging:
+
+     oc port-forward svc/pangea-api 8080:8080
+
+In-cluster endpoint: pangea-api:8080
+DB credentials come from Secret pangea-db-credentials.

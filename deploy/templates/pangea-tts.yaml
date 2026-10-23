@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pangea-tts
+  labels:
+    app.kubernetes.io/name: pangea-tts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pangea-tts
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pangea-tts
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: pangea-tts
+          image: quay.io/sara_banderby/pangea-power:pangea-tts
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MLSERVER_BASE
+              value: http://kokoro-tts-predictor.{{ .Release.Namespace }}.svc.cluster.local
+            - name: MODEL_NAME
+              value: kokoro-tts
+            - name: VOICE
+              value: bf_emma
+            - name: LANG
+              value: en-gb
+            - name: SPEED
+              value: "1.0"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pangea-tts
+  labels:
+    app.kubernetes.io/name: pangea-tts
+spec:
+  selector:
+    app.kubernetes.io/name: pangea-tts
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP

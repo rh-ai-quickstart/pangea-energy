@@ -1,0 +1,1 @@
+# Overrides go under the subchart name, e.g. --set pangea-db.storageSize=20Gi

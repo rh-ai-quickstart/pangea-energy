@@ -1,0 +1,20 @@
+apiVersion: v2
+name: pangea-db
+description: >-
+  PostgreSQL 15 + pgvector for Pangea Energy and Power, packaged for OpenShift.
+  Builds the extension image with an OpenShift BuildConfig and runs it as a
+  StatefulSet with a persistent volume. All components use permissive,
+  redistributable licenses (PostgreSQL License / pgvector).
+type: application
+version: 0.1.0
+# The database engine version bundled by the image.
+appVersion: "15"
+keywords:
+  - postgresql
+  - pgvector
+  - openshift
+  - wind
+  - predictive-maintenance
+home: https://github.com/rh-ai-quickstart/pangea-energy
+maintainers:
+  - name: Pangea Energy and Power

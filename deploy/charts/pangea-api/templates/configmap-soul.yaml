@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pangea-api-soul
+  labels:
+    app.kubernetes.io/name: pangea-api
+data:
+  soul.md: |-
+{{ .Files.Get "files/soul.md" | indent 4 }}

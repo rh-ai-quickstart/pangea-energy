@@ -1,0 +1,103 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: pangea-granite
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    opendatahub.io/connection-type-protocol: uri
+    opendatahub.io/connection-type-ref: uri-v1
+    openshift.io/display-name: pangea-granite
+stringData:
+  URI: oci://quay.io/sara_banderby/pangea-power:granite4
+type: Opaque
+---
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/serving-runtime-scope: global
+    opendatahub.io/template-display-name: vLLM CPU ServingRuntime for KServe
+    opendatahub.io/template-name: vllm-cpu-runtime-template
+    openshift.io/display-name: vLLM CPU ServingRuntime for KServe
+  name: granite4
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  annotations:
+    opendatahub.io/kserve-runtime: vllm
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8080'
+  containers:
+    - name: kserve-container
+      image: 'registry.redhat.io/rhaii/vllm-cpu-rhel9@sha256:5d20d59ed8af657eb23e54a6a2c5b2520791d8544c14e8e83061fae74f36e3e3'
+      command:
+        - python
+        - '-m'
+        - vllm.entrypoints.openai.api_server
+      args:
+        - '--port=8080'
+        - '--model=/mnt/models'
+        - '--served-model-name={{ `{{.Name}}` }}'
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: INFERENCE_SERVICE_NAME
+          value: '{{ `{{.Name}}` }}'
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        periodSeconds: 10
+        successThreshold: 1
+        tcpSocket:
+          port: 8080
+        timeoutSeconds: 1
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: true
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    modelFormat: vLLM
+    security.opendatahub.io/enable-auth: 'false'
+    openshift.io/description: ''
+    openshift.io/display-name: granite4
+    serving.kserve.io/deploymentMode: Standard
+    opendatahub.io/connections: pangea-granite
+    opendatahub.io/model-type: generative
+  name: granite4
+  finalizers:
+    - inferenceservice.finalizers
+    - odh.inferenceservice.finalizers
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: RollingUpdate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      env:
+        - name: VLLM_CPU_KVCACHE_SPACE
+          value: '14'
+      modelFormat:
+        name: vLLM
+      name: ''
+      resources:
+        limits:
+          cpu: '6'
+          memory: 18Gi
+        requests:
+          cpu: '2'
+          memory: 8Gi
+      runtime: granite4
+      storageUri: 'oci://quay.io/sara_banderby/pangea-power:granite4'
+    timeout: 60
