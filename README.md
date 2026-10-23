@@ -37,18 +37,11 @@ when the wind exceeds safe limits, tracks work orders against an engineer
 roster, and puts a conversational assistant in front of all of it that
 supervisors can talk to by voice or text.
 
-It runs entirely on CPU. No GPU is required.
 
 ## Detailed description
 
-Energy producers lose revenue in two directions: unplanned downtime when a
-turbine fails without warning, and wasted truck rolls when an engineer is sent
-to a site in conditions that make the work impossible. Both problems are
-scheduling problems, and both depend on information that is normally spread
-across a SCADA historian, a weather feed, a maintenance backlog and a staffing
-spreadsheet.
 
-The platform brings those together behind one API and one dashboard. Live
+The platform brings information together behind one API and one dashboard. Live
 weather drives an output forecast per site, so a supervisor can see predicted
 generation against what the fleet is actually producing and spot the gap.
 Wind speed above the cut-out threshold automatically marks sites as shut down
@@ -56,16 +49,15 @@ and raises an alert, so nobody is dispatched into a storm. Work orders carry
 the certifications and weather conditions they require, and the roster knows
 who is on shift, who is on leave and who is already fully loaded.
 
-On top of that sits the assistant. A supervisor can ask "which sites are down?"
+On top of that sits the assistant, Pangea. A supervisor can ask "which sites are down?"
 or "who can take the yaw drive fault at Blavand this week?" and get an answer
 grounded in current fleet data rather than a generic model response. A tool
 router decides which fleet data each question needs, so the language model
 answers from real records. Because control-room staff often have their hands
-busy, the assistant accepts speech and answers aloud.
+busy, the assistant also accepts speech and answers aloud.
 
 The fleet in this quickstart is fictional — eleven European sites and 104
-turbines of synthetic data — so it can be deployed and explored without
-connecting to real infrastructure.
+turbines of synthetic data.
 
 | Technology | Sites |
 |------------|-------|
@@ -124,15 +116,12 @@ The browser talks only to `pangea-ui`, which reverse-proxies `/api` to the
 backend on the same origin. That means no CORS configuration and no externally
 reachable route for the API. `pangea-api` is the only component that holds
 database credentials, which it reads from the `pangea-db-credentials` Secret.
-That password is not in the repository: leave `pangea-db.credentials.password`
-empty and the chart generates a random one at install, then reuses it on
-upgrade so the running database keeps working.
+
 
 ## Requirements
 
 ### Minimum hardware requirements
 
-No GPU is required. Every model in this quickstart runs on CPU.
 
 **Application:**
 
@@ -165,17 +154,10 @@ model pods stay `Pending`.
 ### Minimum software requirements
 
 - Red Hat OpenShift
-- Red Hat OpenShift AI — required only for the model-backed features
-  (assistant, voice, solar prediction). The dashboard, alerts, wind cut-out and
-  maintenance features work without it.
+- Red Hat OpenShift AI 3.4
 - `oc` CLI, authenticated against the cluster
 - `helm` CLI, version 3
 
-> **CONTRIBUTOR TODO: pin tested versions**
->
-> Publication requires specific versions, e.g. "Tested with OpenShift AI
-> 2.22-2.25 on OpenShift 4.14+". Fill in the versions this was actually
-> validated against.
 
 ### Required user permissions
 
@@ -183,7 +165,6 @@ This quickstart can be deployed by any user with:
 
 - Permission to create a project/namespace
 - Permission to deploy applications via Helm and to run builds
-- No cluster admin access and no custom SCC required
 
 The database runs under OpenShift's default `restricted-v2` SCC with a random
 UID. One exception: the optional MLflow tracing creates a ServiceAccount bound
@@ -191,12 +172,6 @@ to the `admin` ClusterRole within the project.
 
 ## Deploy
 
-### Prerequisites
-
-- OpenShift cluster, with OpenShift AI for the model-backed features
-- `oc`, authenticated
-- `helm` 3
-- No API keys — Open-Meteo needs none
 
 ### Installation
 
@@ -228,8 +203,6 @@ oc patch bc/pangea-ui --type=merge \
 oc start-build pangea-ui --from-dir=frontend --follow
 ```
 
-Both patches are required: these directories hold a `Containerfile`, not a
-`Dockerfile`.
 
 ```bash
 helm install pangea deploy --namespace ${PROJECT}
@@ -310,10 +283,6 @@ Success:
 INFO:pangea.tracing:mlflow tracing -> https://<host>/mlflow experiment=<project>
 ```
 
-`MLFLOW_WORKSPACE` is required — the client sends it as an
-`X-MLFLOW-WORKSPACE` header and the server rejects requests without it. Its
-value is your OpenShift namespace. Auth is the `pangea-mlflow` ServiceAccount
-token, mounted automatically.
 
 If tracing stays disabled, the warning names the cause. `No module named
 'sqlparse'` and any message about `./mlruns` both mean `MLFLOW_TRACKING_URI`
@@ -465,11 +434,6 @@ oc edit configmap pangea-api-config
 oc rollout restart deploy/pangea-api
 ```
 
-Environment-specific endpoints ship empty rather than hardcoded, so a fresh
-clone points at nothing but your own cluster. `MLFLOW_TRACKING_URI` is the only
-one you have to supply; see
-[Enabling MLflow tracing](#enabling-mlflow-tracing) above.
-
 ## Tags
 
 **Title:** Predict and schedule renewable energy fleet maintenance with AI
@@ -480,7 +444,3 @@ one you have to supply; see
 **Partner:** N/A
 **Contributor org:** Red Hat
 
-> **CONTRIBUTOR TODO: verify industry tag**
->
-> `Industry` must be exactly one value from the list in the quickstart
-> `CONTRIBUTING.md`. Confirm "Energy" is the accepted spelling there.
