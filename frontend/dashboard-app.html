@@ -932,15 +932,6 @@
             color: #e3f2fd;
         }
 
-        .view-all {
-            font-size: 0.8rem;
-            color: #38bdf8;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
         /* Predicted Solar Output */
         .solar-section {
             background: rgba(15, 23, 42, 0.6);
@@ -1011,6 +1002,41 @@
         .solar-spark { height: 34px; margin: 0.4rem 0 0.6rem; }
 
         /* Solar forecast modal */
+        .about-item {
+            padding: 0.7rem 0;
+            cursor: pointer;
+            border-top: 1px solid rgba(56, 189, 248, 0.06);
+        }
+
+        .about-item:hover .about-item-title { color: #38bdf8; }
+
+        .about-item-title {
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            transition: color 0.15s;
+        }
+
+        .about-item-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.15rem;
+        }
+
+        .about-body h3 {
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            margin: 1.2rem 0 0.5rem;
+        }
+
+        .about-body p, .about-body li {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .about-body ul, .about-body ol { margin: 0.4rem 0 0 1.1rem; }
+        .about-body li { margin-bottom: 0.35rem; }
+
         .solar-modal-backdrop {
             display: none;
             position: fixed;
@@ -1178,10 +1204,6 @@
         .cal-task.drifted { border-left-color: #fcd34d; border-left-style: dashed; }
         .cal-empty { font-size: 0.8rem; color: #94a3b8; padding: 0.5rem; }
 
-        .view-all:hover {
-            text-decoration: underline;
-        }
-
         /* Predictive Maintenance */
         .maintenance-item {
             display: grid;
@@ -1266,24 +1288,6 @@
             width: 100%;
         }
 
-        .detail-button {
-            margin-top: auto;
-            background: transparent;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #38bdf8;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .detail-button:hover {
-            background: rgba(56, 189, 248, 0.1);
-            border-color: #38bdf8;
-        }
-
         /* Upcoming Maintenance */
         .maintenance-list {
             display: flex;
@@ -1303,17 +1307,6 @@
 
         .maintenance-list-item + .maintenance-list-item {
             border-top: 1px solid rgba(56, 189, 248, 0.06);
-        }
-
-        .maintenance-icon {
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border-radius: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
         }
 
         .maintenance-details {
@@ -2139,6 +2132,23 @@
                 <div class="availability-change">↑ +6.3% (24h)</div>
                 <div class="chart-container" style="height: 60px; margin-top: 1rem;"><canvas id="totalChart"></canvas></div>
             </div>
+
+            <!-- About -->
+            <div class="fleet-stats" style="margin-top: 1.8rem; padding-top: 1.8rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
+                <div class="fleet-header">About</div>
+                <div class="about-item" onclick="openAbout('purpose')">
+                    <div class="about-item-title">Purpose</div>
+                    <div class="about-item-sub">What this demo shows</div>
+                </div>
+                <div class="about-item" onclick="openAbout('guide')">
+                    <div class="about-item-title">User guide</div>
+                    <div class="about-item-sub">How to use Pangea</div>
+                </div>
+                <div class="about-item" onclick="openAbout('disclaimer')">
+                    <div class="about-item-title">Disclaimer</div>
+                    <div class="about-item-sub">Important information</div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -2255,7 +2265,6 @@
             <div class="alerts-section">
                 <div class="alerts-header">
                     <div class="alerts-title">Active Alerts</div>
-                    <div class="view-all">View all →</div>
                 </div>
 
                 <div id="alertsList">
@@ -2309,55 +2318,23 @@
             <div style="padding: 1.5rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
                 <div class="alerts-header">
                     <div class="alerts-title">Upcoming Maintenance</div>
-                    <div class="view-all">View all →</div>
                 </div>
 
-                <div class="maintenance-list">
-                    <div class="maintenance-list-item">
-                        <div class="maintenance-icon">📋</div>
-                        <div class="maintenance-details">
-                            <div class="maintenance-title">Turbine T-023</div>
-                            <div class="maintenance-subtitle">Gearbox inspection</div>
-                        </div>
-                        <div class="maintenance-date">In 5 days</div>
-                    </div>
-
-                    <div class="maintenance-list-item">
-                        <div class="maintenance-icon">☀️</div>
-                        <div class="maintenance-details">
-                            <div class="maintenance-title">Solar Array S-14</div>
-                            <div class="maintenance-subtitle">Panel cleaning</div>
-                        </div>
-                        <div class="maintenance-date">In 9 days</div>
-                    </div>
-
-                    <div class="maintenance-list-item">
-                        <div class="maintenance-icon">💨</div>
-                        <div class="maintenance-details">
-                            <div class="maintenance-title">Turbine T-067</div>
-                            <div class="maintenance-subtitle">Blade inspection</div>
-                        </div>
-                        <div class="maintenance-date">In 16 days</div>
-                    </div>
-                </div>
+                <div class="maintenance-list" id="maintenanceList"></div>
             </div>
 
             <!-- Predictive Maintenance -->
             <div style="padding: 1.5rem; border-top: 1px solid rgba(56, 189, 248, 0.1);">
                 <div class="alerts-header">
                     <div class="alerts-title">Predictive Maintenance</div>
-                    <div class="view-all">View all →</div>
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                    <div class="priority-badge high">High priority</div>
-                    <div class="turbine-id" style="margin-top: 0.8rem;">Turbine T-104</div>
-                    <div class="turbine-location">Blavand</div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.6rem 0 1rem;">
-                        Rising main-shaft vibration. Est. failure: 12–18 days.
-                    </div>
+                    <div class="priority-badge high" id="pdmBadge">High priority</div>
+                    <div class="turbine-id" style="margin-top: 0.8rem;" id="pdmTurbine">—</div>
+                    <div class="turbine-location" id="pdmSite"></div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0.6rem 0 1rem;" id="pdmDetail"></div>
                     <div class="chart-container" style="height: 80px; margin-bottom: 1rem;"><canvas id="vibrationChart"></canvas></div>
-                    <button class="detail-button" style="width: 100%;">View details →</button>
                 </div>
             </div>
 
@@ -2399,6 +2376,16 @@
             <div class="solar-modal-sub" id="solarModalSub"></div>
             <div class="solar-modal-chart"><canvas id="solarForecastChart"></canvas></div>
             <div class="solar-daily" id="solarModalDaily"></div>
+        </div>
+    </div>
+
+    <div class="solar-modal-backdrop" id="aboutModal" onclick="if(event.target===this)closeAbout()">
+        <div class="solar-modal" style="max-width: 640px;">
+            <div class="solar-modal-head">
+                <div class="solar-modal-title" id="aboutTitle"></div>
+                <button class="solar-modal-close" onclick="closeAbout()" aria-label="Close">×</button>
+            </div>
+            <div class="about-body" id="aboutBody"></div>
         </div>
     </div>
 
@@ -3521,12 +3508,68 @@
             }
         }
 
+        function untilDay(iso) {
+            const days = Math.round((new Date(iso).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+            if (days < 0) return Math.abs(days) + (days === -1 ? ' day late' : ' days late');
+            if (days === 0) return 'Today';
+            if (days === 1) return 'Tomorrow';
+            return 'In ' + days + ' days';
+        }
+
         async function loadMaintenance() {
             try {
                 maintenanceTasks = await apiGet('/maintenance');
             } catch (e) {
                 console.warn('loadMaintenance failed:', e.message);
+                return;
             }
+            const list = document.getElementById('maintenanceList');
+            if (!list) return;
+            const upcoming = maintenanceTasks
+                .filter(t => t.scheduled_start && t.status !== 'completed' && t.status !== 'cancelled')
+                .sort((a, b) => new Date(a.scheduled_start) - new Date(b.scheduled_start))
+                .slice(0, 4);
+            if (!upcoming.length) {
+                list.innerHTML = '<div class="maintenance-subtitle">Nothing scheduled.</div>';
+                return;
+            }
+            list.innerHTML = upcoming.map(t => `
+                <div class="maintenance-list-item">
+                    <div class="maintenance-details">
+                        <div class="maintenance-title">${t.turbine_code || t.site_name || t.work_order_number}</div>
+                        <div class="maintenance-subtitle">${t.title}</div>
+                    </div>
+                    <div class="maintenance-date">${untilDay(t.scheduled_start)}</div>
+                </div>`).join('');
+        }
+
+        async function loadPredictive() {
+            let rows;
+            try {
+                rows = await apiGet('/turbines/health');
+            } catch (e) {
+                console.warn('loadPredictive failed:', e.message);
+                return;
+            }
+            const worst = (rows || []).filter(r => r.degrading)
+                .sort((a, b) => b.peak_z - a.peak_z)[0];
+            const turbine = document.getElementById('pdmTurbine');
+            if (!turbine) return;
+            if (!worst) {
+                document.getElementById('pdmBadge').textContent = 'No concerns';
+                turbine.textContent = 'Fleet nominal';
+                document.getElementById('pdmSite').textContent = '';
+                document.getElementById('pdmDetail').textContent =
+                    'No turbine is running above its own normal-behaviour baseline.';
+                return;
+            }
+            document.getElementById('pdmBadge').textContent =
+                worst.peak_z >= 4 ? 'High priority' : 'Medium priority';
+            turbine.textContent = 'Turbine ' + worst.turbine_code;
+            document.getElementById('pdmSite').textContent = worst.site_name || '';
+            document.getElementById('pdmDetail').textContent =
+                `${worst.component} running ${worst.residual_c.toFixed(1)}°C above expected `
+                + `(${worst.peak_z.toFixed(1)}σ), elevated for ${worst.hours_elevated}h.`;
         }
 
         // Predictive Maintenance vibration trend (showcase turbine NSO-04)
@@ -3794,8 +3837,80 @@
             openForecast = null;
         }
 
+        const ABOUT = {
+            purpose: ['Purpose', `
+                <p>Pangea is a demonstration of AI-driven operations for a renewable energy fleet,
+                running entirely on Red Hat OpenShift AI. It brings generation forecasting, weather-driven
+                shutdowns, predictive maintenance and a conversational assistant together behind one
+                dashboard.</p>
+                <h3>What it demonstrates</h3>
+                <ul>
+                    <li>Solar output forecasting with an XGBoost model exported to ONNX and served on MLServer</li>
+                    <li>Wave output from a physics model driven by live sea state</li>
+                    <li>Wind cut-out: live wind above the safe limit marks sites as shut down and raises an alert</li>
+                    <li>Predictive maintenance using normal-behaviour models that flag a component running
+                        above its own baseline</li>
+                    <li>An assistant that answers from live fleet data and can propose maintenance work
+                        for you to confirm</li>
+                </ul>
+                <p>Every model runs on CPU. No GPU is required.</p>`],
+            guide: ['User guide', `
+                <h3>The dashboard</h3>
+                <ul>
+                    <li><strong>Map</strong> shows all sites by technology; marker colour reflects status.
+                        Click a marker for site detail.</li>
+                    <li><strong>Left</strong> gives fleet counts, availability and total output.</li>
+                    <li><strong>Right</strong> lists active alerts, scheduled work orders and the turbine
+                        the predictive models are most concerned about.</li>
+                </ul>
+                <h3>The assistant</h3>
+                <ol>
+                    <li>Type in the chat box, or use the microphone button to speak.</li>
+                    <li>Ask about sites, output, alerts, work orders or who is on shift.</li>
+                    <li>Instruct it to schedule or reassign work. Writes are never committed directly:
+                        you get a confirmation card first.</li>
+                </ol>
+                <h3>Scheduling</h3>
+                <p>The operator schedule button opens the rota. Work orders are booked against a
+                technician's shift, and the system refuses bookings that fall outside their hours,
+                on leave days, or beyond their remaining capacity.</p>`],
+            disclaimer: ['Disclaimer', `
+                <p><strong>Demonstration purposes only.</strong> This is a quickstart template for
+                deploying AI workloads on OpenShift AI. It is not intended for production use without
+                proper testing and validation.</p>
+                <h3>The fleet is fictional</h3>
+                <p>All eleven sites, their turbines, work orders, technicians and generation figures are
+                synthetic. Any resemblance to real sites or people is coincidental.</p>
+                <h3>Data sources</h3>
+                <ul>
+                    <li>Weather and sea state come from Open-Meteo and are real.</li>
+                    <li>Generation readings are simulated from that weather, not measured.</li>
+                    <li>Predictive maintenance is driven by the public CARE wind turbine SCADA dataset
+                        replayed onto the fictional fleet.</li>
+                </ul>
+                <h3>Model limitations</h3>
+                <ul>
+                    <li>Forecasts and failure predictions are illustrative and have not been validated
+                        against real assets.</li>
+                    <li>The assistant can be wrong. Check what it tells you before acting on it.</li>
+                </ul>
+                <p><strong>No warranty.</strong> This software is provided as is, without warranty of
+                any kind.</p>`],
+        };
+
+        function openAbout(which) {
+            const [title, body] = ABOUT[which];
+            document.getElementById('aboutTitle').textContent = title;
+            document.getElementById('aboutBody').innerHTML = body;
+            document.getElementById('aboutModal').classList.add('open');
+        }
+
+        function closeAbout() {
+            document.getElementById('aboutModal').classList.remove('open');
+        }
+
         window.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeSolarForecast(); closeSchedule(); }
+            if (e.key === 'Escape') { closeSolarForecast(); closeSchedule(); closeAbout(); }
         });
 
         // ---- Operator schedule modal ----
@@ -4560,6 +4675,7 @@
             loadFleet();
             loadAlerts();
             loadMaintenance();
+            loadPredictive();
             loadSolar();
             loadWave();
             checkAgentHealth();
